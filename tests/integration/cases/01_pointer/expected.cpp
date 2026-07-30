@@ -2,8 +2,8 @@
 #include <vector>
 #include <string>
 
-void process(int *data, double &value);
-void transform(const char **args, int &count);
+void process(int *data,double &value);
+void transform(const char **args,int &count);
 char *createBuffer(size_t *size);
 
 int main() {
@@ -18,7 +18,7 @@ int main() {
     const char *msg = "hello int* a;";
     char **argv;
 
-    int x,*p = &value, *q = &value;
+    int x,*p = &value,*q = &value;
     int *&ref = a;
 
     std::vector<int*> vec;

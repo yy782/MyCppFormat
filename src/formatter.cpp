@@ -109,6 +109,16 @@ std::string Formatter::applyPointerAlignment(const std::string &source) {
 }
 
 // ============================================================
+// 规范2: 逗号分隔 — 逗号后面不加空格
+// ============================================================
+
+std::string Formatter::applyCommaSpacing(const std::string &source) {
+    // 匹配逗号后紧跟一个或多个空白字符，替换为逗号
+    static const std::regex re(",\\s+");
+    return std::regex_replace(source, re, ",");
+}
+
+// ============================================================
 // 公开接口
 // ============================================================
 
@@ -118,9 +128,16 @@ std::string Formatter::fixPointerAlignment(const std::string &source) {
     return restore(text);
 }
 
+std::string Formatter::fixCommaSpacing(const std::string &source) {
+    std::string text = protect(source);
+    text = applyCommaSpacing(text);
+    return restore(text);
+}
+
 std::string Formatter::format(const std::string &source) {
     std::string text = protect(source);
     // 依次应用所有格式化规则
     text = applyPointerAlignment(text);
+    text = applyCommaSpacing(text);
     return restore(text);
 }
