@@ -14,6 +14,59 @@ std::string Formatter::protect(const std::string &source) {
     placeholders_.clear();
     std::string result = source;
 
+    int id = 0;
+
+    // ── 原始字符串字面量 ──────────────────────────────────────
+    // C++ raw strings: R"(... )", R"delim(... )delim"
+    // 支持前缀: u8, u, U, L
+    // std::regex 对带反向引用的模式支持有限，故手动扫描。
+    {
+        static const std::regex raw_re(R"((?:u8|u|U|L)?R")");
+        std::string replaced;
+        std::smatch m;
+        auto it = result.cbegin();
+        while (std::regex_search(it, result.cend(), m, raw_re)) {
+            auto match_start = m[0].first;
+            auto pos         = m[0].second;   // 指向 R" 之后
+
+            // 解析分隔符: R" 之后到 ( 之间的字符
+            std::string delim;
+            while (pos != result.cend() && *pos != '(') {
+                delim += *pos;
+                ++pos;
+            }
+            if (pos == result.cend()) {
+                // 畸形，跳过此匹配继续
+                replaced.append(it, m[0].second);
+                it = m[0].second;
+                continue;
+            }
+            ++pos;  // 跳过 '('
+
+            // 闭合序列: ) + delim + "
+            std::string closer = ")" + delim + "\"";
+            auto close_pos = std::search(pos, result.cend(),
+                                          closer.begin(), closer.end());
+            if (close_pos == result.cend()) {
+                // 畸形，跳过
+                replaced.append(it, m[0].first);
+                replaced += "R\"" + delim + "(";
+                it = pos;
+                continue;
+            }
+            auto match_end = close_pos + closer.size();
+
+            replaced.append(it, match_start);
+            std::string ph = std::string("\x01PH", 3) + std::to_string(id) + '\x01';
+            replaced += ph;
+            placeholders_.push_back(std::string(match_start, match_end));
+            ++id;
+            it = match_end;
+        }
+        replaced.append(it, result.cend());
+        result = std::move(replaced);
+    }
+
     // 基础模式：字符串、字符、注释（预处理指令下面单独处理）
     const std::vector<std::pair<std::regex, std::string>> patterns = {
         {std::regex(R"("(?:[^"\\]|\\.)*")"), "string"},
@@ -21,8 +74,6 @@ std::string Formatter::protect(const std::string &source) {
         {std::regex(R"(/\*[\s\S]*?\*/)"), "block_comment"},
         {std::regex(R"(//[^\n]*)"), "line_comment"},
     };
-
-    int id = 0;
 
     for (const auto &[re, label] : patterns) {
         std::string replaced;

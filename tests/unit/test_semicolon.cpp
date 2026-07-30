@@ -114,3 +114,53 @@ TEST(SemicolonTest, StatementEndNoTrailingSpace) {
 TEST(SemicolonTest, MultipleSpaces) {
     EXPECT_EQ(fix_semicolon("a;  b;   c;"), "a;b;c;");
 }
+
+// ============================================================
+// 测试场景13: 原始字符串 R"(...)" — 分号不被修改
+// 预期: R"(hello; world)" 保持不变
+// ============================================================
+TEST(SemicolonTest, RawStringNotModified) {
+    EXPECT_EQ(fix_semicolon("R\"(hello; world)\""),
+              "R\"(hello; world)\"");
+}
+
+// ============================================================
+// 测试场景14: 带前缀的原始字符串 u8R"(...)"
+// 预期: u8R"(hello; world)" 保持不变
+// ============================================================
+TEST(SemicolonTest, RawStringWithPrefixNotModified) {
+    EXPECT_EQ(fix_semicolon("u8R\"(hello; world)\""),
+              "u8R\"(hello; world)\"");
+}
+
+// ============================================================
+// 测试场景15: 自定义分隔符的原始字符串 R"delim(...)delim"
+// 预期: R"delim(hello; world)delim" 保持不变
+// ============================================================
+TEST(SemicolonTest, RawStringWithDelimiterNotModified) {
+    EXPECT_EQ(fix_semicolon("R\"delim(hello; world)delim\""),
+              "R\"delim(hello; world)delim\"");
+}
+
+// ============================================================
+// 测试场景16: 原始字符串内含双引号 — 分号不被修改
+// 预期: R"(say "hi"; bye)" 保持不变
+// ============================================================
+TEST(SemicolonTest, RawStringWithEmbeddedQuotesNotModified) {
+    EXPECT_EQ(fix_semicolon("R\"(say \"hi\"; bye)\""),
+              "R\"(say \"hi\"; bye)\"");
+}
+
+// ============================================================
+// 测试场景17: 原始字符串与普通代码混合
+// 预期: 原始字符串内部不动，外部规则生效
+// ============================================================
+TEST(SemicolonTest, RawStringMixedWithCode) {
+    const char *input =
+        "const char *s = R\"(hello; world)\";\n"
+        "int a; b;";
+    const char *expected =
+        "const char *s = R\"(hello; world)\";\n"
+        "int a;b;";
+    EXPECT_EQ(fix_semicolon(input), expected);
+}
