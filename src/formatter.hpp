@@ -15,6 +15,9 @@ public:
     /// 规范2: 逗号分隔 — 逗号后面不加空格（单元测试入口）
     std::string fixCommaSpacing(const std::string &source);
 
+    /// 规范3: 分号分隔 — 分号后面不加空格（单元测试入口）
+    std::string fixSemicolonSpacing(const std::string &source);
+
 private:
     // ---- 敏感区域保护 ----
     std::string protect(const std::string &source);
@@ -24,6 +27,7 @@ private:
     // ---- 内部规则（操作已保护文本）----
     std::string applyPointerAlignment(const std::string &protected_source);
     std::string applyCommaSpacing(const std::string &protected_source);
+    std::string applySemicolonSpacing(const std::string &protected_source);
 };
 
 #endif // MYCPPFORMAT_FORMATTER_HPP

@@ -152,6 +152,16 @@ std::string Formatter::applyCommaSpacing(const std::string &source) {
 }
 
 // ============================================================
+// 规范3: 分号分隔 — 分号后面不加空格
+// ============================================================
+
+std::string Formatter::applySemicolonSpacing(const std::string &source) {
+    // 匹配分号后紧跟一个或多个空格/制表符（不含换行），替换为分号
+    static const std::regex re(";[ \\t]+");
+    return std::regex_replace(source, re, ";");
+}
+
+// ============================================================
 // 公开接口
 // ============================================================
 
@@ -167,10 +177,17 @@ std::string Formatter::fixCommaSpacing(const std::string &source) {
     return restore(text);
 }
 
+std::string Formatter::fixSemicolonSpacing(const std::string &source) {
+    std::string text = protect(source);
+    text = applySemicolonSpacing(text);
+    return restore(text);
+}
+
 std::string Formatter::format(const std::string &source) {
     std::string text = protect(source);
     // 依次应用所有格式化规则
     text = applyPointerAlignment(text);
     text = applyCommaSpacing(text);
+    text = applySemicolonSpacing(text);
     return restore(text);
 }
