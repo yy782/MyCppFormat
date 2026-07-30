@@ -14,27 +14,23 @@ std::string Formatter::protect(const std::string &source) {
     placeholders_.clear();
     std::string result = source;
 
+    // 基础模式：字符串、字符、注释（预处理指令下面单独处理）
     const std::vector<std::pair<std::regex, std::string>> patterns = {
         {std::regex(R"("(?:[^"\\]|\\.)*")"), "string"},
         {std::regex(R"('(?:[^'\\]|\\.)*')"), "char"},
         {std::regex(R"(/\*[\s\S]*?\*/)"), "block_comment"},
         {std::regex(R"(//[^\n]*)"), "line_comment"},
-        {std::regex(R"(^\s*#[^\n]*)", std::regex::multiline), "preprocessor"},
     };
 
     int id = 0;
+
     for (const auto &[re, label] : patterns) {
         std::string replaced;
         std::smatch m;
         auto it = result.cbegin();
         while (std::regex_search(it, result.cend(), m, re)) {
             replaced.append(it, m[0].first);
-            // 使用 \x01 开头避免与源码混淆，格式: \x01PH+id+\x01
-            std::string ph;
-            ph += static_cast<char>(1);
-            ph += "PH";
-            ph += std::to_string(id);
-            ph += static_cast<char>(1);
+            std::string ph = std::string("\x01PH", 3) + std::to_string(id) + '\x01';
             replaced += ph;
             placeholders_.push_back(m[0].str());
             ++id;
@@ -43,6 +39,43 @@ std::string Formatter::protect(const std::string &source) {
         replaced.append(it, result.cend());
         result = std::move(replaced);
     }
+
+    // 预处理器指令：手动处理反斜杠续行。
+    // std::regex 引擎不支持此类回溯匹配，故用迭代方式扫描续行。
+    {
+        std::regex re(R"(^\s*#[^\n]*)", std::regex::multiline);
+        std::string replaced;
+        std::smatch m;
+        auto it = result.cbegin();
+        while (std::regex_search(it, result.cend(), m, re)) {
+            auto match_start = m[0].first;
+            auto match_end   = m[0].second;
+
+            // 向前扫描反斜杠续行：行末有 \ 则吞下换行和续行内容
+            while (match_end != result.cend()) {
+                auto last = *(match_end - 1);
+                if (last != '\\') break;
+                if (match_end == result.cend()) break;
+                if (*match_end == '\n') {
+                    ++match_end;               // 吞掉换行
+                    while (match_end != result.cend() && *match_end != '\n')
+                        ++match_end;           // 吞掉续行内容
+                } else {
+                    break;
+                }
+            }
+
+            replaced.append(it, match_start);
+            std::string ph = std::string("\x01PH", 3) + std::to_string(id) + '\x01';
+            replaced += ph;
+            placeholders_.push_back(std::string(match_start, match_end));
+            ++id;
+            it = match_end;
+        }
+        replaced.append(it, result.cend());
+        result = std::move(replaced);
+    }
+
     return result;
 }
 

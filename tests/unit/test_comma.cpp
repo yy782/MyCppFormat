@@ -105,3 +105,37 @@ TEST(CommaTest, TabAfterComma) {
 TEST(CommaTest, CharLiteralNotModified) {
     EXPECT_EQ(fix_comma("','"), "','");
 }
+
+// ============================================================
+// 测试场景13: 多行宏定义（反斜杠续行）中的逗号不被修改
+// 预期: #define M(a, b) \\\n  foo(a, b) 保持不变
+// ============================================================
+TEST(CommaTest, MultiLineMacroNotModified) {
+    const char *input =
+        "#define M(a, b) \\\n"
+        "  foo(a, b)\n"
+        "int x, y;";
+    const char *expected =
+        "#define M(a, b) \\\n"
+        "  foo(a, b)\n"
+        "int x,y;";
+    EXPECT_EQ(fix_comma(input), expected);
+}
+
+// ============================================================
+// 测试场景14: 多级续行的宏定义中的逗号不被修改
+// 预期: 所有续行都保持原样
+// ============================================================
+TEST(CommaTest, MultiLevelContinuationNotModified) {
+    const char *input =
+        "#define N(a, b, c) \\\n"
+        "  bar(a, b) \\\n"
+        "  baz(c)\n"
+        "int x, y;";
+    const char *expected =
+        "#define N(a, b, c) \\\n"
+        "  bar(a, b) \\\n"
+        "  baz(c)\n"
+        "int x,y;";
+    EXPECT_EQ(fix_comma(input), expected);
+}
