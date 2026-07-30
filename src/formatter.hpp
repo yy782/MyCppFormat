@@ -18,6 +18,9 @@ public:
     /// 规范3: 分号分隔 — 分号后面不加空格（单元测试入口）
     std::string fixSemicolonSpacing(const std::string &source);
 
+    /// 规范5: 括号内空格 — 去除括号内首尾空格（单元测试入口）
+    std::string fixBracketSpace(const std::string &source);
+
 private:
     // ---- 敏感区域保护 ----
     std::string protect(const std::string &source);
@@ -28,6 +31,7 @@ private:
     std::string applyPointerAlignment(const std::string &protected_source);
     std::string applyCommaSpacing(const std::string &protected_source);
     std::string applySemicolonSpacing(const std::string &protected_source);
+    std::string applyBracketSpace(const std::string &protected_source);
 };
 
 #endif // MYCPPFORMAT_FORMATTER_HPP

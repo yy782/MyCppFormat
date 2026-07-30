@@ -228,6 +228,28 @@ std::string Formatter::applySemicolonSpacing(const std::string &source) {
 }
 
 // ============================================================
+// 规范5: 括号内空格 — 去除括号内首尾空格
+// ============================================================
+
+std::string Formatter::applyBracketSpace(const std::string &source) {
+    std::string text = source;
+
+    // 去除 '(' 后的空白
+    {
+        static const std::regex re("\\([ \\t]+");
+        text = std::regex_replace(text, re, "(");
+    }
+
+    // 去除 ')' 前的空白
+    {
+        static const std::regex re("[ \\t]+\\)");
+        text = std::regex_replace(text, re, ")");
+    }
+
+    return text;
+}
+
+// ============================================================
 // 公开接口
 // ============================================================
 
@@ -249,11 +271,18 @@ std::string Formatter::fixSemicolonSpacing(const std::string &source) {
     return restore(text);
 }
 
+std::string Formatter::fixBracketSpace(const std::string &source) {
+    std::string text = protect(source);
+    text = applyBracketSpace(text);
+    return restore(text);
+}
+
 std::string Formatter::format(const std::string &source) {
     std::string text = protect(source);
     // 依次应用所有格式化规则
     text = applyPointerAlignment(text);
     text = applyCommaSpacing(text);
     text = applySemicolonSpacing(text);
+    text = applyBracketSpace(text);
     return restore(text);
 }
