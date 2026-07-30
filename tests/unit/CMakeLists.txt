@@ -1,6 +1,6 @@
 set(UNIT_TEST_SOURCES
     test_pointer.cpp
-    # test_comma.cpp      # 待添加：逗号规则测试
+    test_comma.cpp
     # test_semicolon.cpp  # 待添加：分号规则测试
     # test_bracket.cpp    # 待添加：括号空格规则测试
     # test_keyword.cpp    # 待添加：关键字空格规则测试
