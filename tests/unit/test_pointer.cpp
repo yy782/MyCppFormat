@@ -132,3 +132,39 @@ TEST(PointerTest, PreprocessorNotModified) {
 TEST(PointerTest, CommaSeparatedDecl) {
     EXPECT_EQ(fix_pointer("int a, * b;"), "int a,*b;");
 }
+
+// ============================================================
+// 测试场景: 模板类型后的引用 — >& var → > &var
+// 预期: std::vector<char>& put → std::vector<char> &put
+// ============================================================
+TEST(PointerTest, TemplateRefSpacing) {
+    EXPECT_EQ(fix_pointer("std::vector<char>& put"),
+              "std::vector<char> &put");
+}
+
+// ============================================================
+// 测试场景: 模板类型后的指针 — >* var → > *var
+// 预期: std::vector<char>* ptr → std::vector<char> *ptr
+// ============================================================
+TEST(PointerTest, TemplatePtrSpacing) {
+    EXPECT_EQ(fix_pointer("std::vector<char>* ptr"),
+              "std::vector<char> *ptr");
+}
+
+// ============================================================
+// 测试场景: 模板类型后的引用，已有空格 — > & var → > &var
+// 预期: 移除 & 和变量名之间的空格
+// ============================================================
+TEST(PointerTest, TemplateRefRemoveInnerSpace) {
+    EXPECT_EQ(fix_pointer("std::vector<char> & put"),
+              "std::vector<char> &put");
+}
+
+// ============================================================
+// 测试场景: 嵌套模板后的引用 — >>& var → >> &var
+// 预期: map<int,int>>& m → map<int,int>> &m
+// ============================================================
+TEST(PointerTest, NestedTemplateRefSpacing) {
+    EXPECT_EQ(fix_pointer("map<int,int>>& m"),
+              "map<int,int>> &m");
+}

@@ -190,6 +190,20 @@ std::string Formatter::applyPointerAlignment(const std::string &source) {
         text = std::regex_replace(text, re, "$1$2$3");
     }
 
+    // 规则1e: >> * name → >> *name（先处理嵌套模板，避免被 1f 误消费）
+    {
+        const char *pat = "(>>)\\s*([*&]+)\\s*([a-zA-Z_]\\w*)";
+        std::regex re(pat);
+        text = std::regex_replace(text, re, "$1 $2$3");
+    }
+
+    // 规则1f: > * name → > *name（单层模板类型后的指针/引用对齐）
+    {
+        const char *pat = "(>)\\s*([*&]+)\\s*([a-zA-Z_]\\w*)";
+        std::regex re(pat);
+        text = std::regex_replace(text, re, "$1 $2$3");
+    }
+
     return text;
 }
 

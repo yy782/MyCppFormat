@@ -5,7 +5,7 @@
 void process(int *data,double &value);
 void transform(const char **args,int &count);
 char *createBuffer(size_t *size);
-void input(std::vector<char>& put);
+void input(std::vector<char> &put);
 
 int main() {
     int    value = 42;
