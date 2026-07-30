@@ -1,5 +1,6 @@
 #include "formatter.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <sstream>
 
@@ -48,9 +49,9 @@ std::string Formatter::protect(const std::string &source) {
             auto close_pos = std::search(pos, result.cend(),
                                           closer.begin(), closer.end());
             if (close_pos == result.cend()) {
-                // 畸形，跳过
+                // 畸形，保留匹配到的原始文本（含前缀）
                 replaced.append(it, m[0].first);
-                replaced += "R\"" + delim + "(";
+                replaced += std::string(m[0].first, m[0].second) + delim + "(";
                 it = pos;
                 continue;
             }
