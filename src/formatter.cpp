@@ -250,6 +250,19 @@ std::string Formatter::applyBracketSpace(const std::string &source) {
 }
 
 // ============================================================
+// 规范6: 关键字空格 — 关键字与左括号间保留一个空格
+// ============================================================
+
+std::string Formatter::applyKeywordSpace(const std::string &source) {
+    // 匹配关键字后可选空白紧接 '('，替换为 "关键字 ("
+    // \b 确保是独立单词，不会误匹配 my_if 等
+    static const std::regex re(
+        R"(\b(if|for|while|switch|catch)\s*\()"
+    );
+    return std::regex_replace(source, re, "$1 (");
+}
+
+// ============================================================
 // 公开接口
 // ============================================================
 
@@ -277,6 +290,12 @@ std::string Formatter::fixBracketSpace(const std::string &source) {
     return restore(text);
 }
 
+std::string Formatter::fixKeywordSpace(const std::string &source) {
+    std::string text = protect(source);
+    text = applyKeywordSpace(text);
+    return restore(text);
+}
+
 std::string Formatter::format(const std::string &source) {
     std::string text = protect(source);
     // 依次应用所有格式化规则
@@ -284,5 +303,6 @@ std::string Formatter::format(const std::string &source) {
     text = applyCommaSpacing(text);
     text = applySemicolonSpacing(text);
     text = applyBracketSpace(text);
+    text = applyKeywordSpace(text);
     return restore(text);
 }
