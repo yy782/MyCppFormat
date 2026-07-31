@@ -82,17 +82,23 @@ MyCppFormat/
 │   └── DEVELOPMENT.md
 ├── src/
 │   ├── main.cpp
-│   ├── formatter.hpp
-│   └── formatter.cpp
+│   ├── ts_formatter.hpp
+│   └── ts_formatter.cpp
 └── tests/
     ├── unit/
     │   ├── CMakeLists.txt
-    │   └── test_pointer.cpp
+    │   ├── test_basic.cpp
+    │   ├── test_bracket.cpp
+    │   ├── test_comma.cpp
+    │   ├── test_keyword.cpp
+    │   ├── test_pointer.cpp
+    │   └── test_semicolon.cpp
     └── integration/
         ├── run_tests.sh
         └── cases/
             ├── 01_pointer/
             ├── 02_comma/
-            ├── ...
-            └── 07_mixed/
+            ├── 03_semicolon/
+            ├── 04_bracket_space/
+            └── 05_keyword_space/
 ```

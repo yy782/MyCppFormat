@@ -14,6 +14,14 @@ public:
     TsFormatter();
     ~TsFormatter();
 
+    // 禁止拷贝（持有原始指针 parser_，拷贝会导致 double-free）
+    TsFormatter(const TsFormatter&) = delete;
+    TsFormatter& operator=(const TsFormatter&) = delete;
+
+    // 支持移动（移动后源对象 parser_ 置为 nullptr）
+    TsFormatter(TsFormatter&& other) noexcept;
+    TsFormatter& operator=(TsFormatter&& other) noexcept;
+
     /// 对 C++ 源码应用所有格式规则，返回格式化后的文本
     std::string format(const std::string &source);
 

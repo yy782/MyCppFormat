@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <sstream>
+#include <stdexcept>
 
 // tree-sitter-cpp 语言定义（由 tree-sitter-cpp 库提供）
 extern "C" {
@@ -15,10 +16,32 @@ TSLanguage *tree_sitter_cpp();
 TsFormatter::TsFormatter()  = default;
 TsFormatter::~TsFormatter() { destroy_parser(); }
 
+// ── 移动语义（接管 parser_ 所有权） ──
+TsFormatter::TsFormatter(TsFormatter&& other) noexcept : parser_(other.parser_) {
+    other.parser_ = nullptr;
+}
+
+TsFormatter& TsFormatter::operator=(TsFormatter&& other) noexcept {
+    if (this != &other) {
+        destroy_parser();
+        parser_ = other.parser_;
+        other.parser_ = nullptr;
+    }
+    return *this;
+}
+
+// ── parser 生命周期管理 ──
+
 void TsFormatter::init_parser() {
     if (parser_ != nullptr) return;
     parser_ = ts_parser_new();
-    ts_parser_set_language(parser_, tree_sitter_cpp());
+    if (parser_ == nullptr) {
+        throw std::runtime_error("TsFormatter: ts_parser_new() 返回 nullptr");
+    }
+    if (!ts_parser_set_language(parser_, tree_sitter_cpp())) {
+        destroy_parser();
+        throw std::runtime_error("TsFormatter: ts_parser_set_language() 失败");
+    }
 }
 
 void TsFormatter::destroy_parser() {
@@ -179,6 +202,9 @@ std::string TsFormatter::format(const std::string &source) {
     TSTree *tree = ts_parser_parse_string(
         parser_, nullptr, source.data(),
         static_cast<uint32_t>(source.size()));
+
+    // tree 为 nullptr 时回退为原样返回
+    if (tree == nullptr) return source;
 
     TSNode root = ts_tree_root_node(tree);
 
