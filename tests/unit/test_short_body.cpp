@@ -137,3 +137,80 @@ TEST(ShortBodyTest, SpaceThenNewlineNotModified) {
 TEST(ShortBodyTest, BraceInitializerNotModified) {
     EXPECT_EQ(fix_body("auto v = { 1, 2 };"), "auto v = { 1, 2 };");
 }
+
+// ────────────────────────────────────────────────────────────
+// Bug: 同一行嵌套大括号 — 外层语句体应被格式化
+// 当前正则 [^\{\}\n] 遇到内层 { 即终止，
+// 导致含嵌套大括号的外层 { } 完全不被匹配。
+// 修复后外层首尾空格应被移除，内层 brace-initializer（无 ;）保持不变。
+// ────────────────────────────────────────────────────────────
+
+// ============================================================
+// 测试场景15: 外层语句体包裹 brace-initializer
+// 预期: { return {1, 2}; } → {return {1, 2};}
+// Bug:  当前输出 { return {1, 2}; }（外层未被处理）
+// ============================================================
+TEST(ShortBodyTest, NestedBraceInitInBody) {
+    EXPECT_EQ(fix_body("{ return {1, 2}; }"), "{return {1, 2};}");
+}
+
+// ============================================================
+// 测试场景16: if 语句体包裹 brace-initializer
+// 预期: if (x) { return {1, 2}; } → if (x) {return {1, 2};}
+// Bug:  当前输出 if (x) { return {1, 2}; }
+// ============================================================
+TEST(ShortBodyTest, IfWithNestedBraceInit) {
+    EXPECT_EQ(fix_body("if (x) { return {1, 2}; }"),
+              "if (x) {return {1, 2};}");
+}
+
+// ============================================================
+// 测试场景17: Lambda 表达式在语句体内
+// 外层和内层 {} 均含分号，都是语句体，均应格式化。
+// 预期: { return []{ return 0; }(); } → {return []{return 0;}();}
+// Bug:  当前只改了内层 → { return []{return 0;}(); }
+// ============================================================
+TEST(ShortBodyTest, LambdaInsideBody) {
+    EXPECT_EQ(fix_body("{ return []{ return 0; }(); }"),
+              "{return []{return 0;}();}");
+}
+
+// ============================================================
+// 测试场景18: 变量声明含 brace-initializer
+// 预期: { auto v = {1, 2}; } → {auto v = {1, 2};}
+// Bug:  当前输出 { auto v = {1, 2}; }
+// ============================================================
+TEST(ShortBodyTest, VarDeclWithBraceInit) {
+    EXPECT_EQ(fix_body("{ auto v = {1, 2}; }"), "{auto v = {1, 2};}");
+}
+
+// ============================================================
+// 测试场景19: 多层嵌套 brace-initializer
+// 预期: { auto m = { {1}, {2} }; } → {auto m = { {1}, {2} };}
+// Bug:  当前输出 { auto m = { {1}, {2} }; }
+// ============================================================
+TEST(ShortBodyTest, MultiNestedBraceInit) {
+    EXPECT_EQ(fix_body("{ auto m = { {1}, {2} }; }"),
+              "{auto m = { {1}, {2} };}");
+}
+
+// ============================================================
+// 测试场景20: 构造函数式初始化在语句体内
+// 预期: { std::vector<int> v{1, 2}; } → {std::vector<int> v{1, 2};}
+// Bug:  当前输出 { std::vector<int> v{1, 2}; }
+// ============================================================
+TEST(ShortBodyTest, ConstructorInitInBody) {
+    EXPECT_EQ(fix_body("{ std::vector<int> v{1, 2}; }"),
+              "{std::vector<int> v{1, 2};}");
+}
+
+// ============================================================
+// 测试场景21: Lambda 在 if 语句体内
+// if 体与 Lambda 体内层 {} 均含分号，均应格式化。
+// 预期: if (x) { auto f = []{ do_something(); }; } → if (x) {auto f = []{do_something();};}
+// Bug:  当前只改了内层
+// ============================================================
+TEST(ShortBodyTest, LambdaInIfBody) {
+    EXPECT_EQ(fix_body("if (x) { auto f = []{ do_something(); }; }"),
+              "if (x) {auto f = []{do_something();};}");
+}
