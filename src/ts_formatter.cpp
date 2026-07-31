@@ -121,6 +121,32 @@ bool TsFormatter::is_keyword(const char *type) {
            std::strcmp(type, "catch") == 0;
 }
 
+/// 检查 { 或 } 是否属于函数定义的 compound_statement 定界符
+/// （排除 if/for/while/switch/try-catch 的复合语句块，
+///   以及 braced initializer 如 return { 1 };）
+/// 必须同时满足：直接父节点是 compound_statement，且该
+/// compound_statement 的父节点是 function_definition
+static bool in_function_body(TSNode node) {
+    const char *type = ts_node_type(node);
+    if (type == nullptr) return false;
+    if (std::strcmp(type, "{") != 0 && std::strcmp(type, "}") != 0) return false;
+
+    TSNode parent = ts_node_parent(node);
+    if (ts_node_is_null(parent)) return false;
+
+    const char *ptype = ts_node_type(parent);
+    if (ptype == nullptr || std::strcmp(ptype, "compound_statement") != 0) {
+        return false;
+    }
+
+    TSNode gp = ts_node_parent(parent);
+    if (ts_node_is_null(gp)) return false;
+
+    const char *gptype = ts_node_type(gp);
+    return gptype != nullptr &&
+           std::strcmp(gptype, "function_definition") == 0;
+}
+
 bool TsFormatter::in_error_subtree(TSNode node) {
     // 仅检查节点本身或祖先是否为 ERROR 类型（而非 ts_node_has_error
     // 因为它会对含 ERROR 后代的正常节点也返回 true）
@@ -166,6 +192,17 @@ std::string TsFormatter::whitespace_between(
         return strip_ws_same_line(original_gap);
     }
     if (cur_type != nullptr && std::strcmp(cur_type, ")") == 0) {
+        return strip_ws_same_line(original_gap);
+    }
+
+    // ── 规范4: 短函数体 — 单行函数体大括号内去除首尾空格 ──
+    // 仅对 function_definition 内的 compound_statement 生效
+    if (prev_type != nullptr && std::strcmp(prev_type, "{") == 0 &&
+        in_function_body(prev.node)) {
+        return strip_ws_same_line(original_gap);
+    }
+    if (cur_type != nullptr && std::strcmp(cur_type, "}") == 0 &&
+        in_function_body(cur.node)) {
         return strip_ws_same_line(original_gap);
     }
 
