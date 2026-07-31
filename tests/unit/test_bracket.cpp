@@ -26,3 +26,10 @@ TEST(BracketTest, For) {
 TEST(BracketTest, While) {
     EXPECT_EQ(fmt("while ( x < 5 )"), "while (x < 5)");
 }
+
+// switch 需要完整语句（case/default + 块），不能孤立出现
+TEST(BracketTest, Switch) {
+    // 括号内空格被移除，分号规则同时去掉 ; 后空格
+    EXPECT_EQ(fmt("switch ( x ) { case 1: break; }"),
+              "switch (x) { case 1: break;}");
+}
