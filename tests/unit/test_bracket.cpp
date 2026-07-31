@@ -33,3 +33,11 @@ TEST(BracketTest, Switch) {
     EXPECT_EQ(fmt("switch ( x ) { case 1: break; }"),
               "switch (x) { case 1: break;}");
 }
+
+// catch 必须跟在 try 块之后，不能孤立出现
+TEST(BracketTest, Catch) {
+    // 括号规则仅处理 ( )，不处理 { }，因此大括号内空格保持原样
+    // 括号规则：去除 catch( … ) 内的首尾空格；指针规则：& e → &e
+    EXPECT_EQ(fmt("try { } catch ( std::exception & e ) { }"),
+              "try { } catch (std::exception &e) { }");
+}
