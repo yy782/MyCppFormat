@@ -1,4 +1,4 @@
-#include "formatter.hpp"
+#include "ts_formatter.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     std::cout << "已备份: " << backup_path << std::endl;
 
     // 3. 格式化
-    Formatter fmt;
+    TsFormatter fmt;
     std::string result = fmt.format(source);
 
     // 4. 写回原文件
