@@ -22,7 +22,7 @@ int main() {
     int x,*p = &value,*q = &value;
     int *&ref = a;
 
-    std::vector<int*> vec;
+    std::vector<int *> vec;
 
     // comment: int* a; double & b;
     int *result = 0;

@@ -1,170 +1,108 @@
+#include "ts_formatter.hpp"
+
 #include <gtest/gtest.h>
 
-#include "formatter.hpp"
-
-/// 辅助函数：对输入的 C++ 代码应用指针/引用对齐规则
-static std::string fix_pointer(const std::string &input) {
-    Formatter fmt;
-    return fmt.fixPointerAlignment(input);
+// ============================================================
+// 测试辅助
+// ============================================================
+static std::string fmt(const std::string &source) {
+    TsFormatter f;
+    return f.format(source);
 }
 
 // ============================================================
-// 测试场景1: 基本指针声明 — * 应该紧贴变量名
-// 预期: int* a; → int *a;
+// 规范1: 指针/引用对齐
 // ============================================================
-TEST(PointerTest, BasicPointerTypeStarAttached) {
-    EXPECT_EQ(fix_pointer("int* a;"), "int *a;");
+
+// int* a → int *a
+TEST(PointerTest, BasicInt) {
+    EXPECT_EQ(fmt("int* a;"), "int *a;");
+}
+
+// double& b → double &b
+TEST(PointerTest, BasicRef) {
+    EXPECT_EQ(fmt("double& b;"), "double &b;");
+}
+
+// int * a → int *a（移除多余空格）
+TEST(PointerTest, RemoveExtraSpace) {
+    EXPECT_EQ(fmt("int * a;"), "int *a;");
+}
+
+// char** argv → char **argv
+TEST(PointerTest, DoublePointer) {
+    EXPECT_EQ(fmt("char** argv;"), "char **argv;");
+}
+
+// int*& p → int *&p
+TEST(PointerTest, PointerRefCombo) {
+    EXPECT_EQ(fmt("int*& p;"), "int *&p;");
+}
+
+// void func(int* a, double& b);
+// 指针规则 + 逗号规则同时触发
+TEST(PointerTest, InFunctionParams) {
+    EXPECT_EQ(fmt("void func(int* a, double& b);"),
+              "void func(int *a,double &b);");
+}
+
+// const char* msg → const char *msg
+TEST(PointerTest, ConstChar) {
+    EXPECT_EQ(fmt("const char* msg;"), "const char *msg;");
+}
+
+// std::vector<int*>& → std::vector<int *>&
+TEST(PointerTest, InTemplate) {
+    EXPECT_EQ(fmt("std::vector<int*> v;"), "std::vector<int *> v;");
+}
+
+// a * b（乘法）不应被修改
+TEST(PointerTest, NotMultiplication) {
+    EXPECT_EQ(fmt("int c = a * b;"), "int c = a * b;");
+}
+
+// a & b（按位与）不应被修改
+TEST(PointerTest, NotBitwiseAnd) {
+    EXPECT_EQ(fmt("int c = a & b;"), "int c = a & b;");
+}
+
+// , * → ,*  逗号规则优先于指针前置空格（* 在 pointer_declarator 内）
+// 输入 char *a, *b; → 逗号后不应因为指针规则而添加空格
+TEST(PointerTest, CommaBeforePointerDecl) {
+    EXPECT_EQ(fmt("char *a, *b;"), "char *a,*b;");
+}
+
+// , * → ,*  多个逗号分隔的指针声明，均不添加空格
+TEST(PointerTest, CommaBeforeMultiPointerDecl) {
+    EXPECT_EQ(fmt("int *p, *q, *r;"), "int *p,*q,*r;");
+}
+
+// ( * → (*  括号规则优先于指针前置空格（* 在抽象指针声明器内）
+// 输入 int ( *p ); → 左括号后不应因为指针规则而添加空格
+TEST(PointerTest, ParenBeforePointerDecl) {
+    EXPECT_EQ(fmt("int ( *p );"), "int (*p);");
 }
 
 // ============================================================
-// 测试场景2: * 与变量名之间有空格 — 空格应被移除
-// 预期: int * a; → int *a;
+// 跨行指针声明 — 不应被折叠为单行
 // ============================================================
-TEST(PointerTest, PointerSpaceBeforeName) {
-    EXPECT_EQ(fix_pointer("int * a;"), "int *a;");
+
+// int\n*p; → 保留换行，不折叠为 int *p;
+TEST(PointerTest, MultiLinePointerPreservesNewline) {
+    EXPECT_EQ(fmt("int\n*p;"), "int\n*p;");
 }
 
-// ============================================================
-// 测试场景3: 多个空格 — 应规范化为单空格
-// 预期: int  *  a; → int *a;
-// ============================================================
-TEST(PointerTest, PointerMultipleSpaces) {
-    EXPECT_EQ(fix_pointer("int  *  a;"), "int *a;");
+// int\n&r; → 保留换行，不折叠为 int &r;
+TEST(PointerTest, MultiLineRefPreservesNewline) {
+    EXPECT_EQ(fmt("int\n&r;"), "int\n&r;");
 }
 
-// ============================================================
-// 测试场景4: 引用声明 — & 应该紧贴变量名
-// 预期: double& b; → double &b;
-// ============================================================
-TEST(PointerTest, BasicRefTypeAttached) {
-    EXPECT_EQ(fix_pointer("double& b;"), "double &b;");
+// char\n**argv; → 保留换行和缩进
+TEST(PointerTest, MultiLineDoublePointer) {
+    EXPECT_EQ(fmt("char\n**argv;"), "char\n**argv;");
 }
 
-// ============================================================
-// 测试场景5: 引用与变量名之间有空格
-// 预期: double & b; → double &b;
-// ============================================================
-TEST(PointerTest, RefSpaceBeforeName) {
-    EXPECT_EQ(fix_pointer("double & b;"), "double &b;");
-}
-
-// ============================================================
-// 测试场景6: 函数参数中的指针
-// 预期: void func(int* a,double* b); → void func(int *a,double *b);
-// ============================================================
-TEST(PointerTest, FunctionParamPointer) {
-    EXPECT_EQ(fix_pointer("void func(int* a,double* b);"),
-              "void func(int *a,double *b);");
-}
-
-// ============================================================
-// 测试场景7: 函数参数中 * 有空格
-// 预期: void func(int * a); → void func(int *a);
-// ============================================================
-TEST(PointerTest, FunctionParamPointerSpace) {
-    EXPECT_EQ(fix_pointer("void func(int * a);"), "void func(int *a);");
-}
-
-// ============================================================
-// 测试场景8: 双重指针 char **argv 已正确不变
-// ============================================================
-TEST(PointerTest, DoublePointerAlreadyCorrect) {
-    EXPECT_EQ(fix_pointer("char **argv;"), "char **argv;");
-}
-
-// ============================================================
-// 测试场景9: char** argv → char **argv
-// ============================================================
-TEST(PointerTest, DoublePointerAttachedToType) {
-    EXPECT_EQ(fix_pointer("char** argv;"), "char **argv;");
-}
-
-// ============================================================
-// 测试场景10: 指针的引用 int *&p
-// ============================================================
-TEST(PointerTest, PointerRef) {
-    EXPECT_EQ(fix_pointer("int *& p;"), "int *&p;");
-}
-
-// ============================================================
-// 测试场景11: 乘法运算不被修改
-// 预期: a * b; 保持不变
-// ============================================================
-TEST(PointerTest, MultiplicationNotModified) {
-    EXPECT_EQ(fix_pointer("a * b;"), "a * b;");
-}
-
-// ============================================================
-// 测试场景12: 解引用不被修改
-// 预期: *ptr = 5; 保持不变
-// ============================================================
-TEST(PointerTest, DereferenceNotModified) {
-    EXPECT_EQ(fix_pointer("*ptr = 5;"), "*ptr = 5;");
-}
-
-// ============================================================
-// 测试场景13: 字符串字面量内的 * 不被修改
-// ============================================================
-TEST(PointerTest, StringLiteralNotModified) {
-    EXPECT_EQ(fix_pointer(R"(const char* msg = "int* a;";)"),
-              R"(const char *msg = "int* a;";)");
-}
-
-// ============================================================
-// 测试场景14: 注释内的 * & 不被修改
-// ============================================================
-TEST(PointerTest, CommentNotModified) {
-    EXPECT_EQ(fix_pointer("// int* a;\nint *b;"), "// int* a;\nint *b;");
-}
-
-// ============================================================
-// 测试场景15: 预处理器指令不被修改
-// ============================================================
-TEST(PointerTest, PreprocessorNotModified) {
-    EXPECT_EQ(fix_pointer("#define PTR int *\nint* a;"),
-              "#define PTR int *\nint *a;");
-}
-
-// ============================================================
-// 测试场景16: 逗号后有空格分离的指针声明，* 应收紧到变量名
-// 预期: int a, * b; → int a,*b;（逗号间距由规范2逗号规则处理）
-// ============================================================
-TEST(PointerTest, CommaSeparatedDecl) {
-    EXPECT_EQ(fix_pointer("int a, * b;"), "int a,*b;");
-}
-
-// ============================================================
-// 测试场景: 模板类型后的引用 — >& var → > &var
-// 预期: std::vector<char>& put → std::vector<char> &put
-// ============================================================
-TEST(PointerTest, TemplateRefSpacing) {
-    EXPECT_EQ(fix_pointer("std::vector<char>& put"),
-              "std::vector<char> &put");
-}
-
-// ============================================================
-// 测试场景: 模板类型后的指针 — >* var → > *var
-// 预期: std::vector<char>* ptr → std::vector<char> *ptr
-// ============================================================
-TEST(PointerTest, TemplatePtrSpacing) {
-    EXPECT_EQ(fix_pointer("std::vector<char>* ptr"),
-              "std::vector<char> *ptr");
-}
-
-// ============================================================
-// 测试场景: 模板类型后的引用，已有空格 — > & var → > &var
-// 预期: 移除 & 和变量名之间的空格
-// ============================================================
-TEST(PointerTest, TemplateRefRemoveInnerSpace) {
-    EXPECT_EQ(fix_pointer("std::vector<char> & put"),
-              "std::vector<char> &put");
-}
-
-// ============================================================
-// 测试场景: 嵌套模板后的引用 — >>& var → >> &var
-// 预期: map<int,int>>& m → map<int,int>> &m
-// ============================================================
-TEST(PointerTest, NestedTemplateRefSpacing) {
-    EXPECT_EQ(fix_pointer("map<int,int>>& m"),
-              "map<int,int>> &m");
+// int\n*&p; → 保留换行
+TEST(PointerTest, MultiLinePointerRefCombo) {
+    EXPECT_EQ(fmt("int\n*&p;"), "int\n*&p;");
 }
