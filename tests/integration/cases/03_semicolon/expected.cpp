@@ -9,7 +9,7 @@ void func(int *a,double &b,char c) {
     x;
 
 int main() {
-    int *p, *q;
+    int *p,*q;
     double val = 3.14;
     double &r = val;
 

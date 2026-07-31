@@ -151,16 +151,6 @@ std::string TsFormatter::whitespace_between(
         return original_gap;
     }
 
-    // ── 规范1: 指针/引用对齐 ──
-    // 后置空格：前一个 token 是指针/引用 → 移除后置空格（先检查，处理 ** 等连续情况）
-    if (in_pointer_or_ref_decl(prev.node)) {
-        return strip_ws_same_line(original_gap);
-    }
-    // 前置空格：当前 token 是指针/引用 → 前加一个空格
-    if (in_pointer_or_ref_decl(cur.node)) {
-        return " ";
-    }
-
     // ── 规范2: 逗号分隔 — 逗号后不加空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ",") == 0) {
         return strip_ws_same_line(original_gap);
@@ -177,6 +167,16 @@ std::string TsFormatter::whitespace_between(
     }
     if (cur_type != nullptr && std::strcmp(cur_type, ")") == 0) {
         return strip_ws_same_line(original_gap);
+    }
+
+    // ── 规范1: 指针/引用对齐 ──
+    // 后置空格：前一个 token 是指针/引用 → 移除后置空格（处理 ** 等连续情况）
+    if (in_pointer_or_ref_decl(prev.node)) {
+        return strip_ws_same_line(original_gap);
+    }
+    // 前置空格：当前 token 是指针/引用 → 前加一个空格
+    if (in_pointer_or_ref_decl(cur.node)) {
+        return " ";
     }
 
     // ── 规范6: 关键字空格 — 关键字与 '(' 间保留一个空格 ──

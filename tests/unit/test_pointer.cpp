@@ -65,3 +65,13 @@ TEST(PointerTest, NotMultiplication) {
 TEST(PointerTest, NotBitwiseAnd) {
     EXPECT_EQ(fmt("int c = a & b;"), "int c = a & b;");
 }
+
+// ,* → ,* 逗号规则优先于指针前置空格（不应在逗号后添加空格）
+TEST(PointerTest, CommaBeforePointer) {
+    EXPECT_EQ(fmt("func(x, *p)"), "func(x,*p)");
+}
+
+// (* → (* 括号规则优先于指针前置空格（不应在左括号后添加空格）
+TEST(PointerTest, ParenBeforePointer) {
+    EXPECT_EQ(fmt("(*p)"), "(*p)");
+}
