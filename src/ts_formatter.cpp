@@ -61,6 +61,12 @@ std::string TsFormatter::keep_newlines_only(const std::string &gap) {
     return result;
 }
 
+/// 移除同行水平空白；若原 gap 跨行则原样返回以保留缩进
+static std::string strip_ws_same_line(const std::string &gap) {
+    if (gap.find('\n') != std::string::npos) return gap;  // 跨行 → 保留缩进
+    return "";  // 同行 → 移除水平空白
+}
+
 // ============================================================
 // 辅助：节点类型检测
 // ============================================================
@@ -125,7 +131,7 @@ std::string TsFormatter::whitespace_between(
     // ── 规范1: 指针/引用对齐 ──
     // 后置空格：前一个 token 是指针/引用 → 移除后置空格（先检查，处理 ** 等连续情况）
     if (in_pointer_or_ref_decl(prev.node)) {
-        return keep_newlines_only(original_gap);
+        return strip_ws_same_line(original_gap);
     }
     // 前置空格：当前 token 是指针/引用 → 前加一个空格
     if (in_pointer_or_ref_decl(cur.node)) {
@@ -134,20 +140,20 @@ std::string TsFormatter::whitespace_between(
 
     // ── 规范2: 逗号分隔 — 逗号后不加空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ",") == 0) {
-        return keep_newlines_only(original_gap);
+        return strip_ws_same_line(original_gap);
     }
 
     // ── 规范3: 分号分隔 — 分号后不加水平空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ";") == 0) {
-        return keep_newlines_only(original_gap);
+        return strip_ws_same_line(original_gap);
     }
 
     // ── 规范5: 括号内空格 — 去除 '(' 后和 ')' 前的水平空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, "(") == 0) {
-        return keep_newlines_only(original_gap);
+        return strip_ws_same_line(original_gap);
     }
     if (cur_type != nullptr && std::strcmp(cur_type, ")") == 0) {
-        return keep_newlines_only(original_gap);
+        return strip_ws_same_line(original_gap);
     }
 
     // ── 规范6: 关键字空格 — 关键字与 '(' 间保留一个空格 ──

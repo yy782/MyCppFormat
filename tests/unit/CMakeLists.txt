@@ -1,5 +1,10 @@
 set(UNIT_TEST_SOURCES
-    test_ts_formatter.cpp
+    test_basic.cpp
+    test_bracket.cpp
+    test_comma.cpp
+    test_keyword.cpp
+    test_pointer.cpp
+    test_semicolon.cpp
 )
 
 add_executable(unit ${UNIT_TEST_SOURCES}

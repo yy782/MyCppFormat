@@ -19,10 +19,10 @@ int main() {
     const char *msg = "hello int* a;";
     char **argv;
 
-    int x,*p = &value,*q = &value;
+    int x, *p = &value, *q = &value;
     int *&ref = a;
 
-    std::vector<int*> vec;
+    std::vector<int *> vec;
 
     // comment: int* a; double & b;
     int *result = 0;
