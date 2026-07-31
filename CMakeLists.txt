@@ -13,7 +13,7 @@ include(FetchContent)
 # ── tree-sitter 核心库 ──
 FetchContent_Declare(
     tree-sitter
-    GIT_REPOSITORY git@github.com:tree-sitter/tree-sitter.git
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter.git
     GIT_TAG        v0.25.3
     GIT_PROGRESS   TRUE
     SOURCE_SUBDIR  lib
@@ -23,7 +23,7 @@ FetchContent_MakeAvailable(tree-sitter)
 # ── tree-sitter-cpp 语法（仅下载源码，无 CMake 构建系统）──
 FetchContent_Declare(
     tree-sitter-cpp
-    GIT_REPOSITORY git@github.com:tree-sitter/tree-sitter-cpp.git
+    GIT_REPOSITORY https://github.com/tree-sitter/tree-sitter-cpp.git
     GIT_TAG        v0.23.4
     GIT_PROGRESS   TRUE
 )
