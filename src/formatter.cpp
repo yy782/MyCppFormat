@@ -263,6 +263,29 @@ std::string Formatter::applyKeywordSpace(const std::string &source) {
 }
 
 // ============================================================
+// 规范4: 短函数体 — 去除单行大括号内部首尾空格
+// ============================================================
+
+std::string Formatter::applyShortBody(const std::string &source) {
+    std::string text = source;
+
+    // 去除 '{' 后的水平空白（仅本行内，不跨行）
+    {
+        static const std::regex re("\\{[ \\t]+");
+        text = std::regex_replace(text, re, "{");
+    }
+
+    // 去除 '}' 前的水平空白，但仅在 '}' 紧跟在非空格/非换行字符后
+    // 避免吞掉行首缩进: "    }" 保持，"return;} " → "return;}"
+    {
+        static const std::regex re("([^ \\t\\n])[ \\t]+\\}");
+        text = std::regex_replace(text, re, "$1}");
+    }
+
+    return text;
+}
+
+// ============================================================
 // 公开接口
 // ============================================================
 
@@ -296,6 +319,12 @@ std::string Formatter::fixKeywordSpace(const std::string &source) {
     return restore(text);
 }
 
+std::string Formatter::fixShortBody(const std::string &source) {
+    std::string text = protect(source);
+    text = applyShortBody(text);
+    return restore(text);
+}
+
 std::string Formatter::format(const std::string &source) {
     std::string text = protect(source);
     // 依次应用所有格式化规则
@@ -304,5 +333,6 @@ std::string Formatter::format(const std::string &source) {
     text = applySemicolonSpacing(text);
     text = applyBracketSpace(text);
     text = applyKeywordSpace(text);
+    text = applyShortBody(text);
     return restore(text);
 }
