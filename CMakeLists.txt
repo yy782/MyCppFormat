@@ -10,6 +10,9 @@ find_package(GTest REQUIRED)
 
 include(FetchContent)
 
+# 强制 tree-sitter 编译为静态库，确保生成的二进制自包含
+set(BUILD_SHARED_LIBS OFF)
+
 # ── tree-sitter 核心库 ──
 FetchContent_Declare(
     tree-sitter
