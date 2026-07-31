@@ -119,18 +119,8 @@ TEST(ShortBodyTest, MultiLineWithLineComment) {
 }
 
 // ============================================================
-// 测试场景13: brace-initializer — 单行内空格被移除
-// auto v = { 1, 2 }; → auto v = {1, 2};
-// 虽然是初始化列表而非函数体，但单行 {} 内空格清理保持一致
-// ============================================================
-TEST(ShortBodyTest, BraceInitializer) {
-    EXPECT_EQ(fix_body("auto v = { 1, 2 };"), "auto v = {1, 2};");
-}
-
-// ============================================================
-// 测试场景14: { 后空格再接换行 — 不受影响（空格在新行前）
-// { \n...} → 空格是 { 后唯一内容，[^\n]+? 无字符可匹配，
-// 随后 \n 阻断了对 } 的匹配
+// 测试场景13: { 后空格再接换行 — 不受影响（空格在新行前）
+// { \n...} → 跨行，正则要求单行匹配，\n 阻断匹配
 // ============================================================
 TEST(ShortBodyTest, SpaceThenNewlineNotModified) {
     const char *input =
@@ -138,4 +128,12 @@ TEST(ShortBodyTest, SpaceThenNewlineNotModified) {
         "    return 0;\n"
         "}";
     EXPECT_EQ(fix_body(input), input);
+}
+
+// ============================================================
+// 测试场景14: brace-initializer 不受影响
+// auto v = { 1, 2 }; 内部无分号，不符合语句体特征，保持原样
+// ============================================================
+TEST(ShortBodyTest, BraceInitializerNotModified) {
+    EXPECT_EQ(fix_body("auto v = { 1, 2 };"), "auto v = { 1, 2 };");
 }

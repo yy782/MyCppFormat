@@ -275,10 +275,12 @@ std::string Formatter::applyShortBody(const std::string &source) {
         text = std::regex_replace(text, re, "{}");
     }
 
-    // 单行大括号：去除 { 后和 } 前的水平空白
-    // [^\n] 确保只匹配同一行内的 { ... }，多行体不受影响
+    // 单行语句体：去除 { 后和 } 前的水平空白
+    // [^\{\}\n] 排除大括号和换行，确保每个 {} 对独立匹配
+    // 要求内容含分号，排除 brace-initializer（如 { 1, 2 }）
     {
-        static const std::regex re("\\{[ \\t]*([^\\n]+?)[ \\t]*\\}");
+        static const std::regex re(
+            "\\{[ \\t]*([^\\{\\}\\n]*;[^\\{\\}\\n]*?)[ \\t]*\\}");
         text = std::regex_replace(text, re, "{$1}");
     }
 
