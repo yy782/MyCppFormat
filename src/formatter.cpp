@@ -269,17 +269,17 @@ std::string Formatter::applyKeywordSpace(const std::string &source) {
 std::string Formatter::applyShortBody(const std::string &source) {
     std::string text = source;
 
-    // 去除 '{' 后的水平空白（仅本行内，不跨行）
+    // 空大括号：{  } → {}
     {
-        static const std::regex re("\\{[ \\t]+");
-        text = std::regex_replace(text, re, "{");
+        static const std::regex re("\\{[ \\t]+\\}");
+        text = std::regex_replace(text, re, "{}");
     }
 
-    // 去除 '}' 前的水平空白，但仅在 '}' 紧跟在非空格/非换行字符后
-    // 避免吞掉行首缩进: "    }" 保持，"return;} " → "return;}"
+    // 单行大括号：去除 { 后和 } 前的水平空白
+    // [^\n] 确保只匹配同一行内的 { ... }，多行体不受影响
     {
-        static const std::regex re("([^ \\t\\n])[ \\t]+\\}");
-        text = std::regex_replace(text, re, "$1}");
+        static const std::regex re("\\{[ \\t]*([^\\n]+?)[ \\t]*\\}");
+        text = std::regex_replace(text, re, "{$1}");
     }
 
     return text;

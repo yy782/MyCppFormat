@@ -92,3 +92,50 @@ TEST(ShortBodyTest, MultipleBracePairs) {
     EXPECT_EQ(fix_body("int f() { return 0; } int g() { return 1; }"),
               "int f() {return 0;} int g() {return 1;}");
 }
+
+// ============================================================
+// 测试场景11: 多行体，{ 后紧跟块注释 — 不受影响
+// protect() 将 /*c*/ 替换为占位符，但 [^\n]+? 在 \n 前截止，
+// 无法跨行匹配 }，整个正则失败，文本保持不变
+// ============================================================
+TEST(ShortBodyTest, MultiLineWithBlockComment) {
+    const char *input =
+        "{ /*c*/\n"
+        "    x;\n"
+        "}";
+    EXPECT_EQ(fix_body(input), input);
+}
+
+// ============================================================
+// 测试场景12: 多行体，{ 后紧跟行注释 — 不受影响
+// 原理同测试11，行注释的占位符后跟 \n，阻断单行匹配
+// ============================================================
+TEST(ShortBodyTest, MultiLineWithLineComment) {
+    const char *input =
+        "if (x) { //c\n"
+        "    y;\n"
+        "}";
+    EXPECT_EQ(fix_body(input), input);
+}
+
+// ============================================================
+// 测试场景13: brace-initializer — 单行内空格被移除
+// auto v = { 1, 2 }; → auto v = {1, 2};
+// 虽然是初始化列表而非函数体，但单行 {} 内空格清理保持一致
+// ============================================================
+TEST(ShortBodyTest, BraceInitializer) {
+    EXPECT_EQ(fix_body("auto v = { 1, 2 };"), "auto v = {1, 2};");
+}
+
+// ============================================================
+// 测试场景14: { 后空格再接换行 — 不受影响（空格在新行前）
+// { \n...} → 空格是 { 后唯一内容，[^\n]+? 无字符可匹配，
+// 随后 \n 阻断了对 } 的匹配
+// ============================================================
+TEST(ShortBodyTest, SpaceThenNewlineNotModified) {
+    const char *input =
+        "{ \n"
+        "    return 0;\n"
+        "}";
+    EXPECT_EQ(fix_body(input), input);
+}
