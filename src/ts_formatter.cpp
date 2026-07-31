@@ -174,9 +174,12 @@ std::string TsFormatter::whitespace_between(
     if (in_pointer_or_ref_decl(prev.node)) {
         return strip_ws_same_line(original_gap);
     }
-    // 前置空格：当前 token 是指针/引用 → 前加一个空格
+    // 前置空格：当前 token 是指针/引用 → 同行加一个空格，跨行保留换行和缩进
     if (in_pointer_or_ref_decl(cur.node)) {
-        return " ";
+        if (original_gap.find('\n') != std::string::npos) {
+            return original_gap;  // 跨行 → 不折叠
+        }
+        return " ";  // 同行 → 单个空格
     }
 
     // ── 规范6: 关键字空格 — 关键字与 '(' 间保留一个空格 ──

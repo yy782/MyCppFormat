@@ -66,12 +66,43 @@ TEST(PointerTest, NotBitwiseAnd) {
     EXPECT_EQ(fmt("int c = a & b;"), "int c = a & b;");
 }
 
-// ,* → ,* 逗号规则优先于指针前置空格（不应在逗号后添加空格）
-TEST(PointerTest, CommaBeforePointer) {
-    EXPECT_EQ(fmt("func(x, *p)"), "func(x,*p)");
+// , * → ,*  逗号规则优先于指针前置空格（* 在 pointer_declarator 内）
+// 输入 char *a, *b; → 逗号后不应因为指针规则而添加空格
+TEST(PointerTest, CommaBeforePointerDecl) {
+    EXPECT_EQ(fmt("char *a, *b;"), "char *a,*b;");
 }
 
-// (* → (* 括号规则优先于指针前置空格（不应在左括号后添加空格）
-TEST(PointerTest, ParenBeforePointer) {
-    EXPECT_EQ(fmt("(*p)"), "(*p)");
+// , * → ,*  多个逗号分隔的指针声明，均不添加空格
+TEST(PointerTest, CommaBeforeMultiPointerDecl) {
+    EXPECT_EQ(fmt("int *p, *q, *r;"), "int *p,*q,*r;");
+}
+
+// ( * → (*  括号规则优先于指针前置空格（* 在抽象指针声明器内）
+// 输入 int ( *p ); → 左括号后不应因为指针规则而添加空格
+TEST(PointerTest, ParenBeforePointerDecl) {
+    EXPECT_EQ(fmt("int ( *p );"), "int (*p);");
+}
+
+// ============================================================
+// 跨行指针声明 — 不应被折叠为单行
+// ============================================================
+
+// int\n*p; → 保留换行，不折叠为 int *p;
+TEST(PointerTest, MultiLinePointerPreservesNewline) {
+    EXPECT_EQ(fmt("int\n*p;"), "int\n*p;");
+}
+
+// int\n&r; → 保留换行，不折叠为 int &r;
+TEST(PointerTest, MultiLineRefPreservesNewline) {
+    EXPECT_EQ(fmt("int\n&r;"), "int\n&r;");
+}
+
+// char\n**argv; → 保留换行和缩进
+TEST(PointerTest, MultiLineDoublePointer) {
+    EXPECT_EQ(fmt("char\n**argv;"), "char\n**argv;");
+}
+
+// int\n*&p; → 保留换行
+TEST(PointerTest, MultiLinePointerRefCombo) {
+    EXPECT_EQ(fmt("int\n*&p;"), "int\n*&p;");
 }
