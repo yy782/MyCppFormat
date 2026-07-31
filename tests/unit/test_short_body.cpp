@@ -66,6 +66,30 @@ TEST(ShortBodyTest, WithPointerDeclaration) {
 }
 
 // ============================================================
+// braced initializer 不应被误判为函数体大括号
+// 如 return { 1 }; 中的 { } 是 initializer_list，直接父节点不是
+// compound_statement，短函数体规则不应压缩其内部空格
+// ============================================================
+
+// return { 1 } — braced initializer 内部空格应保留
+TEST(ShortBodyTest, BracedInitReturn) {
+    EXPECT_EQ(fmt("int f() { return { 1 }; }"),
+              "int f() {return { 1 };}");
+}
+
+// return { 1, 2, 3 } — 逗号列表的 braced initializer（逗号规则同时生效）
+TEST(ShortBodyTest, BracedInitList) {
+    EXPECT_EQ(fmt("int f() { return { 1, 2, 3 }; }"),
+              "int f() {return { 1,2,3 };}");
+}
+
+// return { { 1 } } — 嵌套 braced initializer
+TEST(ShortBodyTest, BracedInitNested) {
+    EXPECT_EQ(fmt("int f() { return { { 1 } }; }"),
+              "int f() {return { { 1 } };}");
+}
+
+// ============================================================
 // 不应影响的场景：非函数体内的 { } 保持原样
 // ============================================================
 

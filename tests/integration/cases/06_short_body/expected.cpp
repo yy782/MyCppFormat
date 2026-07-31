@@ -60,6 +60,14 @@ void func_with_catch() {
 // 嵌套大括号的短函数体
 int nested_func() {{ int x = 0;}}
 
+// braced initializer — 不应被短函数体规则压缩
+// 直接父节点是 initializer_list 而非 compound_statement
+int return_braced() {return { 1 };}
+
+std::vector<int> return_braced_list() {return { 1,2,3 };}
+
+std::vector<int> make_vec() {return { 1,2,3,4 };}
+
 // 类成员函数风格
 struct Test {
     int get_val() {return val_;}

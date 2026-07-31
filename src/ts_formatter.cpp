@@ -121,30 +121,30 @@ bool TsFormatter::is_keyword(const char *type) {
            std::strcmp(type, "catch") == 0;
 }
 
-/// 检查 { 或 } 是否属于函数定义的 compound_statement
-/// （排除 if/for/while/switch/try-catch 的复合语句块）
+/// 检查 { 或 } 是否属于函数定义的 compound_statement 定界符
+/// （排除 if/for/while/switch/try-catch 的复合语句块，
+///   以及 braced initializer 如 return { 1 };）
+/// 必须同时满足：直接父节点是 compound_statement，且该
+/// compound_statement 的父节点是 function_definition
 static bool in_function_body(TSNode node) {
     const char *type = ts_node_type(node);
     if (type == nullptr) return false;
     if (std::strcmp(type, "{") != 0 && std::strcmp(type, "}") != 0) return false;
 
     TSNode parent = ts_node_parent(node);
-    while (!ts_node_is_null(parent)) {
-        const char *ptype = ts_node_type(parent);
-        if (ptype == nullptr) break;
-        if (std::strcmp(ptype, "compound_statement") == 0) {
-            // 找到 compound_statement，检查其父节点是否为 function_definition
-            TSNode gp = ts_node_parent(parent);
-            if (!ts_node_is_null(gp)) {
-                const char *gptype = ts_node_type(gp);
-                return gptype != nullptr &&
-                       std::strcmp(gptype, "function_definition") == 0;
-            }
-            return false;
-        }
-        parent = ts_node_parent(parent);
+    if (ts_node_is_null(parent)) return false;
+
+    const char *ptype = ts_node_type(parent);
+    if (ptype == nullptr || std::strcmp(ptype, "compound_statement") != 0) {
+        return false;
     }
-    return false;
+
+    TSNode gp = ts_node_parent(parent);
+    if (ts_node_is_null(gp)) return false;
+
+    const char *gptype = ts_node_type(gp);
+    return gptype != nullptr &&
+           std::strcmp(gptype, "function_definition") == 0;
 }
 
 bool TsFormatter::in_error_subtree(TSNode node) {
