@@ -27,9 +27,9 @@ TEST(SemicolonTest, MultipleSpaces) {
 // 附带分号规则的恒等测试
 // ============================================================
 
-// 分号规则触发：`; }` → `;}`
+// 分号规则触发：`; }` → `;}`；同时短函数体规则触发：`{ ` → `{`
 TEST(SemicolonTest, IdentitySimpleFunc) {
-    EXPECT_EQ(fmt("int f() { return 0; }"), "int f() { return 0;}");
+    EXPECT_EQ(fmt("int f() { return 0; }"), "int f() {return 0;}");
 }
 
 // 分号规则触发：`a; //` → `a;//`

@@ -5,6 +5,7 @@ set(UNIT_TEST_SOURCES
     test_keyword.cpp
     test_pointer.cpp
     test_semicolon.cpp
+    test_short_body.cpp
 )
 
 add_executable(unit ${UNIT_TEST_SOURCES}
