@@ -55,8 +55,10 @@ private:
     static bool in_error_subtree(TSNode node);
 
     /// 根据规则计算两个 token 之间的空白符
+    /// @param angle_depth 当前位置的尖括号深度（>0 表示在模板参数内）
     std::string whitespace_between(const Token &prev, const Token &cur,
-                                   const std::string &source);
+                                   const std::string &source,
+                                   int angle_depth);
 
     // ── 状态 ──
     TSParser *parser_ = nullptr;

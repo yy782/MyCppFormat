@@ -54,7 +54,7 @@ void  operator delete(void *ptr) noexcept {free(ptr);}
 int  use_operator() {
     int  a = 10,b = 3;
     int  x = a + b;
-    int  y = a * b;// * 是乘法，不是指针标记
+    int  y = a * b;   // * 是乘法，不是指针标记
     int  z = a - b;
     bool  eq = (x == y);
     return x ;

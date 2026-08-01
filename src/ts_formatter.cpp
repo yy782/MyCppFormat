@@ -91,6 +91,24 @@ static std::string strip_ws_same_line(const std::string &gap) {
     return "";  // 同行 → 移除水平空白
 }
 
+/// 检查节点是否位于 parameter_declaration 子树内（函数参数上下文）
+static bool in_parameter_context(TSNode node) {
+    TSNode parent = ts_node_parent(node);
+    while (!ts_node_is_null(parent)) {
+        const char *ptype = ts_node_type(parent);
+        if (ptype == nullptr) break;
+        if (std::strcmp(ptype, "parameter_declaration") == 0 ||
+            std::strcmp(ptype, "variadic_parameter_declaration") == 0) return true;
+        // 到达声明/语句/定义层即停止（不继续向上走无关节点的祖先链）
+        if (std::strcmp(ptype, "function_definition") == 0 ||
+            std::strcmp(ptype, "declaration") == 0 ||
+            std::strcmp(ptype, "template_declaration") == 0 ||
+            std::strcmp(ptype, "translation_unit") == 0) break;
+        parent = ts_node_parent(parent);
+    }
+    return false;
+}
+
 // ============================================================
 // 辅助：节点类型检测
 // ============================================================
@@ -332,7 +350,8 @@ static bool overlaps_macro_body(uint32_t gap_start, uint32_t gap_end,
 // ============================================================
 
 std::string TsFormatter::whitespace_between(
-    const Token &prev, const Token &cur, const std::string &source) {
+    const Token &prev, const Token &cur, const std::string &source,
+    int angle_depth) {
 
     const std::string original_gap(
         source.begin() + prev.end_byte,
@@ -354,6 +373,10 @@ std::string TsFormatter::whitespace_between(
 
     // ── 规范3: 分号分隔 — 分号后不加水平空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ";") == 0) {
+        // 注释保留原样间隙（如 `);  // comment`）—— 不修改用户原有空格数
+        if (cur_type != nullptr && std::strcmp(cur_type, "comment") == 0) {
+            return original_gap;
+        }
         return strip_ws_same_line(original_gap);
     }
 
@@ -364,11 +387,30 @@ std::string TsFormatter::whitespace_between(
     }
     // 前置空格：当前 token 是指针/引用 → 同行加一个空格，跨行保留换行和缩进
     bool ref_decl = in_pointer_or_ref_decl(cur.node);
+    // 启发式：tree-sitter-cpp 可能不将参数包中的 && 识别为 reference_declarator
+    // （如 Args&&...rest），此时通过 context 判断：
+    //   angle_depth == 0  → 函数参数中的转发引用  → 加前置空格
+    //   angle_depth > 0   → 模板参数中的右值引用  → 保持紧邻（不加空格）
+    if (!ref_decl && cur_type != nullptr &&
+        std::strcmp(cur_type, "&&") == 0 &&
+        original_gap.find('\n') == std::string::npos &&
+        original_gap.empty() &&
+        angle_depth == 0 &&
+        in_parameter_context(cur.node)) {
+        ref_decl = true;
+    }
     if (ref_decl) {
         if (original_gap.find('\n') != std::string::npos) {
             return original_gap;  // 跨行 → 不折叠
         }
         return " ";  // 同行 → 单个空格
+    }
+
+    // ── 参数包展开: ... 在函数参数声明中紧跟变量名（如 ...rest）──
+    // 模板参数中的 ... 保留原样（如 template<typename... Args>）
+    if (prev_type != nullptr && std::strcmp(prev_type, "...") == 0 &&
+        in_parameter_context(prev.node)) {
+        return strip_ws_same_line(original_gap);
     }
 
     // ================================================================
@@ -577,11 +619,12 @@ std::string TsFormatter::format(const std::string &source) {
     //          若 gap 与宏体范围有交集则保持原样，否则应用格式化规则 ─
     std::ostringstream out;
     uint32_t prev_end = 0;
+    int angle_depth = 0;  // 跟踪尖括号深度（>0 表示在模板参数内）
 
     for (size_t i = 0; i < tokens.size(); ++i) {
         const auto &tok = tokens[i];
         // 跳过零宽 token（合成空格可能被 tree-sitter 识别为无内容 token）
-        if (tok.start_byte >= tok.end_byte) continue;
+        if (tok.start_byte >= tok.end_byte) goto update_depth;
 
         if (i > 0) {
             const auto &prev = tokens[i - 1];
@@ -593,7 +636,7 @@ std::string TsFormatter::format(const std::string &source) {
                 out << std::string(source.begin() + gap_start,
                                    source.begin() + gap_end);
             } else {
-                out << whitespace_between(prev, tok, source);
+                out << whitespace_between(prev, tok, source, angle_depth);
             }
         } else {
             // 首个 token 之前的内容
@@ -604,6 +647,15 @@ std::string TsFormatter::format(const std::string &source) {
         out << std::string(source.begin() + tok.start_byte,
                            source.begin() + tok.end_byte);
         prev_end = tok.end_byte;
+
+    update_depth:
+        // 更新尖括号深度：< 加一，> 减一
+        // 注意：>> 已在 parse_src 中展开为 > >，此处是 token 级计数
+        {
+            const char *ttype = ts_node_type(tok.node);
+            if (ttype != nullptr && std::strcmp(ttype, "<") == 0) ++angle_depth;
+            if (ttype != nullptr && std::strcmp(ttype, ">") == 0 && angle_depth > 0) --angle_depth;
+        }
     }
 
     // 尾部残余内容
