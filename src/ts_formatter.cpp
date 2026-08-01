@@ -242,6 +242,7 @@ bool TsFormatter::is_control_flow_paren(TSNode paren_node) {
         if (type != nullptr &&
             (std::strcmp(type, "if_statement")       == 0 ||
              std::strcmp(type, "for_statement")      == 0 ||
+             std::strcmp(type, "for_range_loop")     == 0 ||
              std::strcmp(type, "while_statement")    == 0 ||
              std::strcmp(type, "switch_statement")   == 0 ||
              std::strcmp(type, "catch_clause")       == 0 ||
@@ -420,7 +421,6 @@ std::string TsFormatter::whitespace_between(
         std::strcmp(cur_type, "&&") == 0 &&
         original_gap.find('\n') == std::string::npos &&
         original_gap.empty() &&
-        angle_depth == 0 &&
         in_parameter_context(cur.node)) {
         ref_decl = true;
     }

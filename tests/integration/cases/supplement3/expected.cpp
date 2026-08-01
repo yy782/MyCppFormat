@@ -195,7 +195,7 @@ void testForLoops ( ) {
     
     // 范围 for 循环（不应改变）
     std::vector<int> m_data = { 1,2,3 };
-    for ( auto &item : m_data ) {
+    for (auto &item : m_data) {
         item *= 2 ;
     }
     
@@ -301,7 +301,7 @@ void testControlFlow ( int value ,const std::vector<int> &vec ) {
     } while (i > 0) ;
     
     // range-based for
-    for ( const auto &item : vec ) {
+    for (const auto &item : vec) {
         std::cout << item << std::endl ;
     }
     
@@ -371,7 +371,7 @@ public:
     
     // 变参模板
     template<typename... Us>
-    void setMultiple ( Us&&...values ) {
+    void setMultiple ( Us &&...values ) {
         ( m_data . push_back ( std::forward<Us> ( values ) ) ,... ) ;
     }
     
