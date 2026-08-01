@@ -2,6 +2,7 @@
 #define MYCPPFORMAT_TS_FORMATTER_HPP
 
 #include <string>
+#include <utility>
 #include <vector>
 
 extern "C" {

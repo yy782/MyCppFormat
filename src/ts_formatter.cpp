@@ -1,5 +1,6 @@
 #include "ts_formatter.hpp"
 
+#include <cctype>
 #include <cstring>
 #include <sstream>
 #include <stdexcept>
@@ -212,6 +213,103 @@ bool TsFormatter::in_error_subtree(TSNode node) {
 }
 
 // ============================================================
+// 宏体保护：扫描 #define 的 body 字节范围，避免 tree-sitter
+// 将宏体中的 token 当作普通 C++ token 解析导致空白符错误
+// ============================================================
+
+/// 扫描源码行，找出所有 #define 宏体的字节范围 (body_start, body_end)
+/// body 指宏名（及函数式宏的形参列表）之后直到指令末尾的内容，
+/// 支持反斜杠续行。空 body 的宏会被跳过。
+static std::vector<std::pair<uint32_t, uint32_t>>
+find_macro_bodies(const std::string &source) {
+    std::vector<std::pair<uint32_t, uint32_t>> bodies;
+    const char *s = source.data();
+    uint32_t len = static_cast<uint32_t>(source.size());
+    uint32_t i = 0;
+
+    while (i < len) {
+        // 跳过行首空白
+        while (i < len && (s[i] == ' ' || s[i] == '\t')) ++i;
+
+        // 检查 #define 模式: # + 可选空白 + define + 空白
+        if (i >= len || s[i] != '#') goto skip_line;
+
+        {
+            uint32_t j = i + 1;
+            while (j < len && (s[j] == ' ' || s[j] == '\t')) ++j;
+            if (j + 6 > len || std::strncmp(s + j, "define", 6) != 0)
+                goto skip_line;
+            j += 6;
+            // "define" 后必须是分隔符或行尾
+            if (j < len && s[j] != ' ' && s[j] != '\t' && s[j] != '\n' && s[j] != '\r')
+                goto skip_line;
+
+            // 跳过空白至宏名
+            while (j < len && (s[j] == ' ' || s[j] == '\t')) ++j;
+            if (j >= len) goto skip_line;
+
+            // 跳过宏名
+            while (j < len && (std::isalnum(static_cast<unsigned char>(s[j])) || s[j] == '_')) ++j;
+
+            // 函数式宏: 跳过 (...) 形参列表
+            if (j < len && s[j] == '(') {
+                int depth = 1;
+                ++j;  // 跳过 '('
+                while (j < len && depth > 0) {
+                    if (s[j] == '\\') { j += 2; continue; }  // 跳过转义
+                    if (s[j] == '(') ++depth;
+                    else if (s[j] == ')') --depth;
+                    ++j;
+                }
+            }
+
+            uint32_t body_start = j;
+
+            // 收集所有续行（以 \ 结尾的行）
+            while (j < len) {
+                // 找到当前行的行尾
+                while (j < len && s[j] != '\n' && s[j] != '\r') ++j;
+
+                // 检查行尾前（跳过结尾空白）是否为 '\'
+                uint32_t k = j;
+                while (k > body_start && (s[k - 1] == ' ' || s[k - 1] == '\t')) --k;
+                bool cont = (k > body_start && s[k - 1] == '\\');
+
+                // 跳过换行符
+                if (j < len && s[j] == '\r') ++j;
+                if (j < len && s[j] == '\n') ++j;
+
+                if (!cont) break;
+            }
+
+            uint32_t body_end = j;
+
+            if (body_end > body_start) {
+                bodies.emplace_back(body_start, body_end);
+            }
+            i = j;  // 已跳过整个宏定义
+            continue;
+        }
+
+    skip_line:
+        while (i < len && s[i] != '\n' && s[i] != '\r') ++i;
+        if (i < len && s[i] == '\r') ++i;
+        if (i < len && s[i] == '\n') ++i;
+    }
+
+    return bodies;
+}
+
+/// 判断 [gap_start, gap_end) 是否与任一宏体范围有交集
+static bool overlaps_macro_body(uint32_t gap_start, uint32_t gap_end,
+    const std::vector<std::pair<uint32_t, uint32_t>> &bodies) {
+    for (const auto &b : bodies) {
+        if (gap_start < b.second && gap_end > b.first) return true;
+    }
+    return false;
+}
+
+// ============================================================
 // 空白符决策（核心规则引擎）
 // ============================================================
 
@@ -289,23 +387,36 @@ std::string TsFormatter::whitespace_between(
 std::string TsFormatter::format(const std::string &source) {
     if (source.empty()) return source;
 
+    // ─ 阶段1: 扫描 #define 宏体范围 ─
+    auto macro_bodies = find_macro_bodies(source);
+
+    // ─ 阶段2: 构造掩码源 — 宏体替换为等长空格，保留 \ 和换行 ─
+    std::string masked = source;
+    for (const auto &b : macro_bodies) {
+        for (uint32_t p = b.first; p < b.second; ++p) {
+            char c = masked[p];
+            if (c == '\\' || c == '\n' || c == '\r') continue;
+            masked[p] = ' ';
+        }
+    }
+
     init_parser();
 
-    // 解析源码
+    // ─ 阶段3: 对掩码源使用 tree-sitter 解析 ─
     TSTree *tree = ts_parser_parse_string(
-        parser_, nullptr, source.data(),
-        static_cast<uint32_t>(source.size()));
+        parser_, nullptr, masked.data(),
+        static_cast<uint32_t>(masked.size()));
 
-    // tree 为 nullptr 时回退为原样返回
     if (tree == nullptr) return source;
 
     TSNode root = ts_tree_root_node(tree);
 
-    // 收集所有叶子 token
+    // 收集所有叶子 token（基于掩码源，但字节偏移与原始源一致）
     std::vector<Token> tokens;
     collect_tokens(root, tokens);
 
-    // 重构输出
+    // ─ 阶段4: 重构输出 — token 文本和空白均从原始 source 读取；
+    //          若 gap 与宏体范围有交集则保持原样，否则应用格式化规则 ─
     std::ostringstream out;
     uint32_t prev_end = 0;
 
@@ -314,19 +425,28 @@ std::string TsFormatter::format(const std::string &source) {
 
         if (i > 0) {
             const auto &prev = tokens[i - 1];
-            out << whitespace_between(prev, tok, source);
+            uint32_t gap_start = prev.end_byte;
+            uint32_t gap_end   = tok.start_byte;
+
+            if (overlaps_macro_body(gap_start, gap_end, macro_bodies)) {
+                // 宏体范围内 — 保持原始空白不动
+                out << std::string(source.begin() + gap_start,
+                                   source.begin() + gap_end);
+            } else {
+                out << whitespace_between(prev, tok, source);
+            }
         } else {
-            // 第一个 token 之前的内容（如有）
+            // 首个 token 之前的内容
             out << std::string(source.begin(), source.begin() + tok.start_byte);
         }
 
-        // 输出 token 文本
+        // 输出 token 文本（从原始源读取，掩码区不会有 token）
         out << std::string(source.begin() + tok.start_byte,
                            source.begin() + tok.end_byte);
         prev_end = tok.end_byte;
     }
 
-    // 最后一个 token 之后的内容
+    // 尾部残余内容
     if (prev_end < source.size()) {
         out << std::string(source.begin() + prev_end, source.end());
     }
