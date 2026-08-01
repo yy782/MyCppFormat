@@ -60,6 +60,39 @@ class OpResult : public OpResultBase {
   V v_{};
 };
 
+
+template <typename V>
+class OpResult1 : public OpResultBase {
+ public:
+  using Type = V;
+
+  OpResult1(V&& v) : v_(std::move(v)) {}
+
+  OpResult1(const V& v) : v_(v) {}
+
+  using OpResultBase::OpResultBase;
+
+  const V & value() const { return v_; }
+
+  V &value() { return v_; }
+
+  V value_or(V v) const { return status() == OpStatus::OK ? v_ : v; }
+
+  V *operator->() { return &v_; }
+
+  V &operator*() & { return v_; }
+
+  V &&operator*() && { return std::move(v_); }
+
+  const V *operator->() const { return &v_; }
+
+  const V &operator*() const& { return v_; }
+
+ private:
+  V v_{};
+};
+
+
 template <>
 class OpResult<void> : public OpResultBase {
  public:
