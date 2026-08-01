@@ -79,7 +79,7 @@ void string_literal_test() {
 //   模拟真实项目中的一个类，包含构造函数、成员函数、运算符重载
 // ============================================================
 class DataProcessor {
-    int*    buf ;
+    int *buf ;
     size_t  cap ;
     size_t  len ;
 public:
