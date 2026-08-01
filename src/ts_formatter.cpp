@@ -97,7 +97,8 @@ static std::string strip_ws_same_line(const std::string &gap) {
 bool TsFormatter::in_pointer_or_ref_decl(TSNode node) {
     const char *type = ts_node_type(node);
     if (type == nullptr) return false;
-    if (std::strcmp(type, "*") != 0 && std::strcmp(type, "&") != 0) return false;
+    if (std::strcmp(type, "*") != 0 && std::strcmp(type, "&") != 0 &&
+        std::strcmp(type, "&&") != 0) return false;
 
     // 向上查找指针/引用相关的声明符节点
     TSNode parent = ts_node_parent(node);

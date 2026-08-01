@@ -14,7 +14,7 @@ concept valid_await_suspend_return =
     requires { typename std::coroutine_handle<std::coroutine_traits<Return>>;};
 
 template <typename T>
-concept Awaiter = requires(T&& value,std::coroutine_handle<> h) {
+concept Awaiter = requires(T &&value,std::coroutine_handle<> h) {
   { value.await_ready() } -> std::convertible_to<bool>;
 
   { value.await_suspend(h) } -> detail::valid_await_suspend_return;
@@ -23,16 +23,16 @@ concept Awaiter = requires(T&& value,std::coroutine_handle<> h) {
 };
 
 template <typename T>
-  requires requires(T&& value) { static_cast<T&&>(value).operator co_await();}
-auto get_awaiter_impl(T&& value,int) noexcept(
+  requires requires(T &&value) { static_cast<T&&>(value).operator co_await();}
+auto get_awaiter_impl(T &&value,int) noexcept(
     noexcept(static_cast<T&&>(value).operator co_await()))
     -> decltype(static_cast<T&&>(value).operator co_await()) {
   return static_cast<T&&>(value).operator co_await();
 }
 
 template <typename T>
-  requires requires(T&& value) { operator co_await(static_cast<T&&>(value));}
-auto get_awaiter_impl(T&& value,long) noexcept(
+  requires requires(T &&value) { operator co_await(static_cast<T&&>(value));}
+auto get_awaiter_impl(T &&value,long) noexcept(
     noexcept(operator co_await(static_cast<T&&>(value))))
     -> decltype(operator co_await(static_cast<T&&>(value))) {
   return operator co_await(static_cast<T&&>(value));
@@ -40,12 +40,12 @@ auto get_awaiter_impl(T&& value,long) noexcept(
 
 template <typename T>
   requires Awaiter<T&&>
-auto get_awaiter_impl(T&& value,...) noexcept -> T&& {
+auto get_awaiter_impl(T &&value,...) noexcept -> T&& {
   return static_cast<T&&>(value);
 }
 
 template <typename T>
-auto get_awaiter(T&& value) noexcept(
+auto get_awaiter(T &&value) noexcept(
     noexcept(get_awaiter_impl(static_cast<T&&>(value),123)))
     -> decltype(get_awaiter_impl(static_cast<T&&>(value),123)) {
   return get_awaiter_impl(static_cast<T&&>(value),123);
