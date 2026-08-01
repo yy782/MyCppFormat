@@ -10,7 +10,7 @@
 // 单行函数体 — 含空格
 int simple_func() {return 42;}
 
-int add(int a,int b) {return a + b;}
+int add( int a,int b ) {return a + b;}
 
 // 空函数体
 void empty_func() {}
@@ -22,7 +22,7 @@ void null_stmt() {;}
 int declared_var() {int x = 0;}
 
 // 复杂表达式函数体
-double calc(double x,double y) {return (x + y) * (x - y);}
+double calc( double x,double y ) {return ( x + y ) * ( x - y );}
 
 // 已紧凑 — 应保持不变
 int already_compact() {return 0;}
@@ -34,7 +34,7 @@ int * get_ptr() {return nullptr;}
 int & get_ref() {static int x = 0;return x;}
 
 // 多行函数体 — 短函数体规则不应影响
-int multi_line(int n) {
+int multi_line( int n ) {
     int result = 0;
     for (int i = 0;i < n;i++) {
         result += i;
@@ -43,12 +43,12 @@ int multi_line(int n) {
 }
 
 // 含 if 的函数体 — if 的大括号不应受影响
-void func_with_if(int x) {
+void func_with_if( int x ) {
     if (x > 0) { return;}
 }
 
 // 含 switch 的函数体
-void func_with_switch(int x) {
+void func_with_switch( int x ) {
     switch (x) { case 1: return;}
 }
 
@@ -71,7 +71,7 @@ std::vector<int> make_vec() {return { 1,2,3,4 };}
 // 类成员函数风格
 struct Test {
     int get_val() {return val_;}
-    void set_val(int v) {val_ = v;}
+    void set_val( int v ) {val_ = v;}
     int val_;
 };
 

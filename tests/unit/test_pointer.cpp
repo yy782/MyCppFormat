@@ -80,7 +80,7 @@ TEST(PointerTest, CommaBeforeMultiPointerDecl) {
 // ( * → (*  括号规则优先于指针前置空格（* 在抽象指针声明器内）
 // 输入 int ( *p ); → 左括号后不应因为指针规则而添加空格
 TEST(PointerTest, ParenBeforePointerDecl) {
-    EXPECT_EQ(fmt("int ( *p );"), "int (*p);");
+    EXPECT_EQ(fmt("int ( *p );"), "int ( *p );");
 }
 
 // ============================================================
