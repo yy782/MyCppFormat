@@ -54,7 +54,7 @@ for case_dir in "$CASES_DIR"/*/; do
 
     compile_passed=true
     if $diff_passed; then
-        if ! g++ -std=c++17 -fsyntax-only "$tmp" 2>/dev/null; then
+        if ! g++ -std=c++20 -fcoroutines -fsyntax-only "$tmp" 2>/dev/null; then
             compile_passed=false
         fi
     fi
