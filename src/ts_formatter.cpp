@@ -102,7 +102,8 @@ static bool declarator_resolves_to_identifier(TSNode decl) {
     while (!ts_node_is_null(decl)) {
         const char *dtype = ts_node_type(decl);
         if (dtype == nullptr) break;
-        if (std::strcmp(dtype, "identifier") == 0) return true;
+        if (std::strcmp(dtype, "identifier") == 0 ||
+            std::strcmp(dtype, "field_identifier") == 0) return true;
         // 多级指针/引用：继续向下走进内层声明符
         if (std::strcmp(dtype, "pointer_declarator") == 0 ||
             std::strcmp(dtype, "reference_declarator") == 0) {

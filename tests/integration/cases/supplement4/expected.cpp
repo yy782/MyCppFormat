@@ -27,7 +27,7 @@ std::pair< T,U > my_func(T  t,U  u);
 // 供 operator 重载使用的测试类型
 struct MyClass {
     int x = 0;
-    int* data = nullptr;
+    int *data = nullptr;
 
     // 1.2 赋值运算符（含多余空格）
     MyClass  & operator=(const MyClass &other) {x = other.x;return *this ;}
@@ -136,7 +136,7 @@ private:
     int x_ = 0;
     int y_ = 0;
     int z_ = 0;
-    int* ptr_ = nullptr;
+    int *ptr_ = nullptr;
     std::string str_;
 };
 
