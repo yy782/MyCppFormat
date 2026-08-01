@@ -131,7 +131,7 @@
 namespace fu2 {
 inline namespace abi_400 {
 namespace detail {
-template <typename Config, typename Property>
+template <typename Config,typename Property>
 class function;
 
 template <typename...>
@@ -1194,7 +1194,7 @@ class erasure : internal_capacity_holder<typename Config::capacity> {
   }
 
   template <typename T,typename Allocator = std::allocator<std::decay_t<T>>>
-  void assign(std::false_type /*use_bool_op*/, T&& callable,
+  void assign(std::false_type /*use_bool_op*/,T&& callable,
               Allocator&& allocator_ = {}) {
     vtable_.weak_destroy(this->opaque_ptr(),capacity());
     vtable_t::init(
@@ -1205,7 +1205,7 @@ class erasure : internal_capacity_holder<typename Config::capacity> {
         this->opaque_ptr(),capacity());
   }
 
-  template <typename T, typename Allocator = std::allocator<std::decay_t<T>>>
+  template <typename T,typename Allocator = std::allocator<std::decay_t<T>>>
   void assign(std::true_type /*use_bool_op*/,T&& callable,
               Allocator&& allocator_ = {}){
     if (!!callable) {
@@ -1522,32 +1522,32 @@ class function<Config,property<IsThrowing,HasStrongExceptGuarantee,Args...>>
             enable_if_copyable_correct_t<Config,RightConfig>* = nullptr,
             enable_if_owning_correct_t<Config,RightConfig>* = nullptr>
   FU2_DETAIL_CXX14_CONSTEXPR function(
-      function<RightConfig, property_t> const& right)
+      function<RightConfig,property_t> const &right)
       : erasure_(right.erasure_) {}
 
   /// Move construction from another function
   template <typename RightConfig,
-            enable_if_copyable_correct_t<Config, RightConfig>* = nullptr,
+            enable_if_copyable_correct_t<Config,RightConfig>* = nullptr,
             enable_if_owning_correct_t<Config,RightConfig>* = nullptr>
-  FU2_DETAIL_CXX14_CONSTEXPR function(function<RightConfig, property_t>&& right)
+  FU2_DETAIL_CXX14_CONSTEXPR function(function<RightConfig,property_t>&& right)
       : erasure_(std::move(right.erasure_)) {}
 
   /// Construction from a callable object which overloads the `()` operator
-  template <typename T,  //
+  template <typename T,//
             enable_if_not_convertible_to_this<T>* = nullptr,
             enable_if_can_accept_all_t<T>* = nullptr,
             assert_wrong_copy_assign_t<T>* = nullptr,
             assert_no_strong_except_guarantee_t<T>* = nullptr>
   FU2_DETAIL_CXX14_CONSTEXPR function(T&& callable)
-      : erasure_(use_bool_op<unrefcv_t<T>>{}, std::forward<T>(callable)) {}
-  template <typename T, typename Allocator,  //
+      : erasure_(use_bool_op<unrefcv_t<T>>{},std::forward<T>(callable)) {}
+  template <typename T,typename Allocator,//
             enable_if_not_convertible_to_this<T>* = nullptr,
             enable_if_can_accept_all_t<T>* = nullptr,
             enable_if_owning_t<T>* = nullptr,
             assert_wrong_copy_assign_t<T>* = nullptr,
             assert_no_strong_except_guarantee_t<T>* = nullptr>
-  FU2_DETAIL_CXX14_CONSTEXPR function(T&& callable, Allocator&& allocator_)
-      : erasure_(use_bool_op<unrefcv_t<T>>{}, std::forward<T>(callable),
+  FU2_DETAIL_CXX14_CONSTEXPR function(T&& callable,Allocator&& allocator_)
+      : erasure_(use_bool_op<unrefcv_t<T>>{},std::forward<T>(callable),
                  std::forward<Allocator>(allocator_)) {}
 
   /// Empty constructs the function

@@ -341,10 +341,11 @@ std::string TsFormatter::whitespace_between(
     const char *prev_type = ts_node_type(prev.node);
     const char *cur_type  = ts_node_type(cur.node);
 
-    // 如果任意 token 在 ERROR 子树中，保持原样
-    if (in_error_subtree(prev.node) || in_error_subtree(cur.node)) {
-        return original_gap;
-    }
+    // ================================================================
+    // 以下规则仅依赖 token 本身类型，不依赖远方 AST 结构完整性。
+    // 即使 token 位于 ERROR 子树中也可安全应用（例如 ">>" 在模板
+    // 闭合处产生的 ERROR 不应阻止逗号和引用对齐规则）。
+    // ================================================================
 
     // ── 规范2: 逗号分隔 — 逗号后不加空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ",") == 0) {
@@ -354,6 +355,53 @@ std::string TsFormatter::whitespace_between(
     // ── 规范3: 分号分隔 — 分号后不加水平空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ";") == 0) {
         return strip_ws_same_line(original_gap);
+    }
+
+    // ── 规范1: 指针/引用对齐 ──
+    // 后置空格：前一个 token 是指针/引用 → 移除后置空格（处理 ** 等连续情况）
+    if (in_pointer_or_ref_decl(prev.node)) {
+        return strip_ws_same_line(original_gap);
+    }
+    // 前置空格：当前 token 是指针/引用 → 同行加一个空格，跨行保留换行和缩进
+    bool ref_decl = in_pointer_or_ref_decl(cur.node);
+    // 补充：tree-sitter-cpp 可能无法识别函数参数中的引用声明器
+    // （将 T&& 解析为 binary_expression），此时用启发式规则处理：
+    // && 与前一 token 紧邻 → 视为引用声明，插入前置空格。
+    if (!ref_decl && cur_type != nullptr &&
+        std::strcmp(cur_type, "&&") == 0 &&
+        original_gap.find('\n') == std::string::npos &&
+        original_gap.empty()) {
+        ref_decl = true;
+    }
+    if (ref_decl) {
+        if (original_gap.find('\n') != std::string::npos) {
+            return original_gap;  // 跨行 → 不折叠
+        }
+        return " ";  // 同行 → 单个空格
+    }
+
+    // ── 规范7: >> 模板闭合 — 两个相邻 > token 间插入空格 ──
+    // tree-sitter-cpp 不识别 C++11 >> 模板闭合语法，预处理阶段
+    // 已将模板上下文中的 >> 替换为 > （空格），tree-sitter 因此
+    // 产生两个相邻的 > token。但原始源码中它们是紧挨的，gap 为空，
+    // 此处显式插入空格以还原预处理意图。
+    if (prev_type != nullptr && cur_type != nullptr &&
+        std::strcmp(prev_type, ">") == 0 &&
+        std::strcmp(cur_type, ">") == 0) {
+        if (original_gap.find('\n') != std::string::npos) {
+            return original_gap;  // 跨行 → 不修改
+        }
+        return " ";  // 同行 → 插入空格
+    }
+
+    // ================================================================
+    // 以下规则（或默认行为）依赖完整的 AST 结构或不应在
+    // ERROR 子树中修改空白符，因此先做 ERROR 守卫。
+    // ================================================================
+
+    // 如果任意 token 在 ERROR 子树中，保持原样
+    if (in_error_subtree(prev.node) || in_error_subtree(cur.node)) {
+        return original_gap;
     }
 
     // ── 规范5: 括号内空格 — 去除 '(' 后和 ')' 前的水平空格 ──
@@ -373,19 +421,6 @@ std::string TsFormatter::whitespace_between(
     if (cur_type != nullptr && std::strcmp(cur_type, "}") == 0 &&
         in_function_body(cur.node)) {
         return strip_ws_same_line(original_gap);
-    }
-
-    // ── 规范1: 指针/引用对齐 ──
-    // 后置空格：前一个 token 是指针/引用 → 移除后置空格（处理 ** 等连续情况）
-    if (in_pointer_or_ref_decl(prev.node)) {
-        return strip_ws_same_line(original_gap);
-    }
-    // 前置空格：当前 token 是指针/引用 → 同行加一个空格，跨行保留换行和缩进
-    if (in_pointer_or_ref_decl(cur.node)) {
-        if (original_gap.find('\n') != std::string::npos) {
-            return original_gap;  // 跨行 → 不折叠
-        }
-        return " ";  // 同行 → 单个空格
     }
 
     // ── 规范6: 关键字空格 — 关键字与 '(' 间保留一个空格 ──
@@ -443,20 +478,123 @@ std::string TsFormatter::format(const std::string &source) {
         }
     }
 
+    // ─ 阶段2c: >> 模板闭合扩展 ──
+    // tree-sitter-cpp 不支持 C++11 >> 模板闭合语法。此处构建
+    // parse_src（在模板上下文的 >> 间插入合成空格），并维护
+    // pos_map[parse_src_pos] → source_pos 的偏移映射。
+    // 这样 tree-sitter 可以看到正确数量的 > 字符，同时 token
+    // 偏移量通过 pos_map 转换后可从原始 source 读取 token 文本。
+    std::string parse_src;
+    std::vector<uint32_t> pos_map;  // parse_src byte → source byte（masked==source）
+
+    {
+        const char *s = masked.data();
+        uint32_t len = static_cast<uint32_t>(masked.size());
+        int angle_depth = 0;
+        int paren_depth = 0;
+        uint32_t i = 0;
+
+        while (i < len) {
+            char c = s[i];
+            if (c == '(') {
+                ++paren_depth;
+                parse_src += c;  pos_map.push_back(i);  ++i;
+            } else if (c == ')') {
+                if (paren_depth > 0) --paren_depth;
+                parse_src += c;  pos_map.push_back(i);  ++i;
+            } else if (c == '<') {
+                // 跳过 <<, <=, <<= 运算符（不当作模板开括号）
+                if (i + 1 < len) {
+                    char nxt = s[i + 1];
+                    if (nxt == '<') {
+                        int skip = (i + 2 < len && s[i + 2] == '=') ? 3 : 2;
+                        for (int j = 0; j < skip; ++j) {
+                            parse_src += s[i + j];  pos_map.push_back(i + j);
+                        }
+                        i += skip;  continue;
+                    }
+                    if (nxt == '=') {
+                        parse_src += '<';  pos_map.push_back(i);
+                        parse_src += '=';  pos_map.push_back(i + 1);
+                        i += 2;  continue;
+                    }
+                }
+                ++angle_depth;
+                parse_src += c;  pos_map.push_back(i);  ++i;
+            } else if (c == '>') {
+                // 跳过 >=, >>= 运算符
+                if (i + 1 < len) {
+                    char nxt = s[i + 1];
+                    if (nxt == '=') {
+                        parse_src += '>';  pos_map.push_back(i);
+                        parse_src += '=';  pos_map.push_back(i + 1);
+                        i += 2;  continue;
+                    }
+                    if (nxt == '>' && i + 2 < len && s[i + 2] == '=') {
+                        parse_src += '>';  pos_map.push_back(i);
+                        parse_src += '>';  pos_map.push_back(i + 1);
+                        parse_src += '=';  pos_map.push_back(i + 2);
+                        i += 3;  continue;
+                    }
+                }
+                if (i + 1 < len && s[i + 1] == '>') {
+                    // >> 发现
+                    if (angle_depth > 0 && paren_depth == 0) {
+                        // 模板上下文 → 展开为 >  >（带合成空格）
+                        --angle_depth;  // 第一个 >
+                        parse_src += '>';        pos_map.push_back(i);
+                        parse_src += ' ';        pos_map.push_back(i + 1);  // 合成空格→第二>的源位置
+                        parse_src += '>';        pos_map.push_back(i + 1);
+                        if (angle_depth > 0) {
+                            --angle_depth;  // 第二个 > 也闭合一层
+                        }
+                    } else {
+                        // 非模板上下文 → 保持原样
+                        parse_src += s[i];   pos_map.push_back(i);
+                        parse_src += s[i+1]; pos_map.push_back(i + 1);
+                    }
+                    i += 2;
+                } else {
+                    // 单个 > — 若前一个已输出字符也是 >，需加合成空格
+                    if (angle_depth > 0 && paren_depth == 0) {
+                        --angle_depth;
+                        // 防止连续 > 在 parse_src 中形成 >> ERROR
+                        if (!parse_src.empty() && parse_src.back() == '>') {
+                            parse_src += ' ';  pos_map.push_back(i - 1);
+                        }
+                    }
+                    parse_src += c;  pos_map.push_back(i);  ++i;
+                }
+            } else {
+                parse_src += c;  pos_map.push_back(i);  ++i;
+            }
+        }
+    }
+
     init_parser();
 
-    // ─ 阶段3: 对掩码源使用 tree-sitter 解析 ─
+    // ─ 阶段3: 对扩展解析源码使用 tree-sitter 解析 ─
     TSTree *tree = ts_parser_parse_string(
-        parser_, nullptr, masked.data(),
-        static_cast<uint32_t>(masked.size()));
+        parser_, nullptr, parse_src.data(),
+        static_cast<uint32_t>(parse_src.size()));
 
     if (tree == nullptr) return source;
 
     TSNode root = ts_tree_root_node(tree);
 
-    // 收集所有叶子 token（基于掩码源，但字节偏移与原始源一致）
+    // 收集所有叶子 token（基于 parse_src，但通过 pos_map 转换偏移量）
     std::vector<Token> tokens;
     collect_tokens(root, tokens);
+    // 将 parse_src 偏移量转换为 source 偏移量
+    for (auto &tok : tokens) {
+        if (tok.start_byte < pos_map.size()) {
+            tok.start_byte = pos_map[tok.start_byte];
+        }
+        uint32_t e = tok.end_byte;
+        if (e > 0 && e - 1 < pos_map.size()) {
+            tok.end_byte = pos_map[e - 1] + 1;
+        }
+    }
 
     // ─ 阶段4: 重构输出 — token 文本和空白均从原始 source 读取；
     //          若 gap 与宏体范围有交集则保持原样，否则应用格式化规则 ─
@@ -465,6 +603,8 @@ std::string TsFormatter::format(const std::string &source) {
 
     for (size_t i = 0; i < tokens.size(); ++i) {
         const auto &tok = tokens[i];
+        // 跳过零宽 token（合成空格可能被 tree-sitter 识别为无内容 token）
+        if (tok.start_byte >= tok.end_byte) continue;
 
         if (i > 0) {
             const auto &prev = tokens[i - 1];
