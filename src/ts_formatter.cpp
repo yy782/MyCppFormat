@@ -265,27 +265,43 @@ find_macro_bodies(const std::string &source) {
 
             uint32_t body_start = j;
 
-            // 收集所有续行（以 \ 结尾的行）
+            // 收集所有续行（以 \ 结尾的行）。用 line_begin 跟踪每行起点，
+            // 避免反向扫描越过 \n 进入前行误判续行符（如纯空白行）。
+            uint32_t line_begin = body_start;
             while (j < len) {
                 // 找到当前行的行尾
                 while (j < len && s[j] != '\n' && s[j] != '\r') ++j;
 
-                // 检查行尾前（跳过结尾空白）是否为 '\'
+                // 检查行尾前（跳过结尾空白）是否为 '\'，限定在当前行范围内
                 uint32_t k = j;
-                while (k > body_start && (s[k - 1] == ' ' || s[k - 1] == '\t')) --k;
-                bool cont = (k > body_start && s[k - 1] == '\\');
+                while (k > line_begin && (s[k - 1] == ' ' || s[k - 1] == '\t')) --k;
+                bool cont = (k > line_begin && s[k - 1] == '\\');
 
                 // 跳过换行符
                 if (j < len && s[j] == '\r') ++j;
                 if (j < len && s[j] == '\n') ++j;
 
                 if (!cont) break;
+
+                // 下一行续行的起点
+                line_begin = j;
             }
 
             uint32_t body_end = j;
 
+            // 排除空 body（仅含空白和 \ 续行符），避免将换行符标记为 body 范围
             if (body_end > body_start) {
-                bodies.emplace_back(body_start, body_end);
+                bool has_content = false;
+                for (uint32_t p = body_start; p < body_end; ++p) {
+                    char c = s[p];
+                    if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\\') {
+                        has_content = true;
+                        break;
+                    }
+                }
+                if (has_content) {
+                    bodies.emplace_back(body_start, body_end);
+                }
             }
             i = j;  // 已跳过整个宏定义
             continue;
