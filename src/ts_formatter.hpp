@@ -26,6 +26,9 @@ public:
     /// 对 C++ 源码应用所有格式规则，返回格式化后的文本
     std::string format(const std::string &source);
 
+    /// 检查节点类型是否为 C++ 控制流关键字（if/for/while/switch/catch/do）
+    static bool is_keyword(const char *type);
+
 private:
     // ── 解析 ──
     void init_parser();
@@ -47,9 +50,6 @@ private:
 
     /// 检查 token 是否位于 pointer_declarator 或 reference_declarator 内
     static bool in_pointer_or_ref_decl(TSNode node);
-
-    /// 检查 token 是否为 C++ 关键字（if/for/while/switch/catch）
-    static bool is_keyword(const char *type);
 
     /// 检查节点或其祖先是否为 ERROR 节点
     static bool in_error_subtree(TSNode node);
