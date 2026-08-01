@@ -54,6 +54,9 @@ private:
     /// 检查节点或其祖先是否为 ERROR 节点
     static bool in_error_subtree(TSNode node);
 
+    /// 检查 '(' 或 ')' 是否属于控制流语句（if/for/while/switch/catch/do）
+    static bool is_control_flow_paren(TSNode paren_node);
+
     /// 根据规则计算两个 token 之间的空白符
     /// @param angle_depth 当前位置的尖括号深度（>0 表示在模板参数内）
     std::string whitespace_between(const Token &prev, const Token &cur,

@@ -233,6 +233,27 @@ bool TsFormatter::in_error_subtree(TSNode node) {
     return false;
 }
 
+bool TsFormatter::is_control_flow_paren(TSNode paren_node) {
+    // 规范5: 仅对 if/for/while/switch/catch/do 的控制括号去除内部首尾空格
+    // 普通函数调用、声明等括号内空格不受影响
+    TSNode p = ts_node_parent(paren_node);
+    while (!ts_node_is_null(p)) {
+        const char *type = ts_node_type(p);
+        if (type != nullptr &&
+            (std::strcmp(type, "if_statement")       == 0 ||
+             std::strcmp(type, "for_statement")      == 0 ||
+             std::strcmp(type, "for_range_loop")     == 0 ||
+             std::strcmp(type, "while_statement")    == 0 ||
+             std::strcmp(type, "switch_statement")   == 0 ||
+             std::strcmp(type, "catch_clause")       == 0 ||
+             std::strcmp(type, "do_statement")       == 0)) {
+            return true;
+        }
+        p = ts_node_parent(p);
+    }
+    return false;
+}
+
 // ============================================================
 // 宏体保护：扫描 #define 的 body 字节范围，避免 tree-sitter
 // 将宏体中的 token 当作普通 C++ token 解析导致空白符错误
@@ -374,6 +395,10 @@ std::string TsFormatter::whitespace_between(
 
     // ── 规范3: 分号分隔 — 分号后不加水平空格 ──
     if (prev_type != nullptr && std::strcmp(prev_type, ";") == 0) {
+        // 0-width 分号是 tree-sitter 推断的虚拟分号（如 int TestClass::* 被错误
+        // 拆成两语句），不去除后续空白以免破坏原有语法
+        uint32_t prev_width = ts_node_end_byte(prev.node) - ts_node_start_byte(prev.node);
+        if (prev_width == 0) return original_gap;
         // 注释保留原样间隙（如 `);  // comment`）—— 不修改用户原有空格数
         if (cur_type != nullptr && std::strcmp(cur_type, "comment") == 0) {
             return original_gap;
@@ -396,7 +421,6 @@ std::string TsFormatter::whitespace_between(
         std::strcmp(cur_type, "&&") == 0 &&
         original_gap.find('\n') == std::string::npos &&
         original_gap.empty() &&
-        angle_depth == 0 &&
         in_parameter_context(cur.node)) {
         ref_decl = true;
     }
@@ -424,11 +448,13 @@ std::string TsFormatter::whitespace_between(
         return original_gap;
     }
 
-    // ── 规范5: 括号内空格 — 去除 '(' 后和 ')' 前的水平空格 ──
-    if (prev_type != nullptr && std::strcmp(prev_type, "(") == 0) {
+    // ── 规范5: 括号内空格 — 仅控制流语句去除 '(' 后和 ')' 前的水平空格 ──
+    if (prev_type != nullptr && std::strcmp(prev_type, "(") == 0 &&
+        is_control_flow_paren(prev.node)) {
         return strip_ws_same_line(original_gap);
     }
-    if (cur_type != nullptr && std::strcmp(cur_type, ")") == 0) {
+    if (cur_type != nullptr && std::strcmp(cur_type, ")") == 0 &&
+        is_control_flow_paren(cur.node)) {
         return strip_ws_same_line(original_gap);
     }
 

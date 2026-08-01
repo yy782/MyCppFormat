@@ -11,23 +11,23 @@
 // ============================================================
 // 场景1: 指针/引用/逗号/分号/括号/关键字混合
 // ============================================================
-void analyze(int *data ,double &value ,const char **meta) ;
+void analyze( int *data ,double &value ,const char **meta ) ;
 
-int* create_buf(size_t *sz) ;
+int* create_buf( size_t *sz ) ;
 
-void transform_val(int &x) {
+void transform_val( int &x ) {
     if (x > 0) {
         x *= 2 ;
     }
 }
 
-int add_ptrs(int *a ,int *b) {return (*a) + (*b) ;}
+int add_ptrs( int *a ,int *b ) {return ( *a ) + ( *b ) ;}
 
 // ============================================================
 // 场景2: 嵌套结构（if/for/while 嵌套、多层大括号）
 //   内部 if/for 的大括号不应被短函数体规则压缩
 // ============================================================
-void nested_control_flow(int n) {
+void nested_control_flow( int n ) {
     for (int i = 0 ;i < n ;i++) {
         if (i % 2 == 0) {
             for (int j = 0 ;j < i ;j++) {
@@ -44,7 +44,7 @@ void nested_control_flow(int n) {
 // 场景3: 模板、STL 容器
 //   <> 不处理，但 () 和 , 规则照常生效
 // ============================================================
-std::vector<int> filter_data(const std::vector<int> &input ,int threshold) {
+std::vector<int> filter_data( const std::vector<int> &input ,int threshold ) {
     std::vector<int> result ;
     for (size_t i = 0 ;i < input.size() ;i++) {
         if (input[ i ] > threshold) {
@@ -83,16 +83,16 @@ class DataProcessor {
     size_t  cap ;
     size_t  len ;
 public:
-    DataProcessor(size_t capacity) : buf(new int[ capacity ]) ,cap(capacity) ,len(0) {}
+    DataProcessor( size_t capacity ) : buf( new int[ capacity ] ) ,cap( capacity ) ,len( 0 ) {}
     ~DataProcessor() {delete[] buf ;}
 
-    bool push(int val) {
+    bool push( int val ) {
         if (len >= cap) { return false ;}
         buf[ len++ ] = val ;
         return true ;
     }
 
-    int& at(size_t idx) {return buf[ idx ] ;}
+    int& at( size_t idx ) {return buf[ idx ] ;}
 
     int sum() const {
         int total = 0 ;
@@ -108,22 +108,22 @@ int main() {
     int   a = 42 ,b = 10 ;
     int *p = &a ;
     int *q = &b ;
-    transform_val(*p) ;
+    transform_val( *p ) ;
 
     // 场景2 验证
-    nested_control_flow(5) ;
+    nested_control_flow( 5 ) ;
 
     // 场景3 验证
     std::vector<int>  data = { 1 ,2 ,3 ,4 ,5 } ;
-    std::vector<int>  filtered = filter_data(data ,3) ;
+    std::vector<int>  filtered = filter_data( data ,3 ) ;
 
     // 场景4 验证
     string_literal_test() ;
 
     // 场景5 验证
-    DataProcessor  proc(10) ;
-    proc.push(100) ;
-    proc.push(200) ;
+    DataProcessor  proc( 10 ) ;
+    proc.push( 100 ) ;
+    proc.push( 200 ) ;
 
     std::cout << "sum=" << proc.sum() << std::endl ;
     return 0 ;

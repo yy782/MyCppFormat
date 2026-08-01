@@ -6,7 +6,7 @@
 // 输入: if ( x ) → 输出: if (x)
 // ============================================================
 
-void func(int a,int b) {
+void func(int a,int b ) {
     if (a > 0) {
         std::cout << "positive" << std::endl;
     }
@@ -17,19 +17,19 @@ void func(int a,int b) {
         }
     }
 
-    int n = (a + b) * (a - b);
+    int n = (a + b) * ( a - b );
     while (n > 0) {
         n--;
     }
 
     // 嵌套括号
-    int result = (((a + b) * 2) + (b - a));
+    int result = (( (a + b) * 2 ) + ( b - a ));
     if (((result > 0))) {
         result /= (2 + 3);
     }
 }
 
 int main() {
-    func(3,5);
+    func( 3,5 );
     return 0;
 }
