@@ -42,3 +42,25 @@ TEST(KeywordTest, Catch) {
 TEST(KeywordTest, NotFunctionCall) {
     EXPECT_EQ(fmt("func(arg)"), "func(arg)");
 }
+
+TEST(KeywordTest, Do) {
+    // do-while 结构: do 已加入 is_keyword 列表作为防御性覆盖
+    // C++ 合法语法中 do 后必须跟语句而非 '('，因此 keyword+'(' 规则不对 do 触发；
+    // 此处通过格式化和 do-while 整体正确性验证
+    EXPECT_EQ(fmt("do{}while(cond);"), "do{}while (cond);");
+}
+
+// ============================================================
+// 直接验证 is_keyword() 静态方法（不含 tree-sitter 中间层）
+// ============================================================
+
+TEST(KeywordTest, IsKeywordIf)     { EXPECT_TRUE(TsFormatter::is_keyword("if")); }
+TEST(KeywordTest, IsKeywordFor)    { EXPECT_TRUE(TsFormatter::is_keyword("for")); }
+TEST(KeywordTest, IsKeywordWhile)  { EXPECT_TRUE(TsFormatter::is_keyword("while")); }
+TEST(KeywordTest, IsKeywordSwitch) { EXPECT_TRUE(TsFormatter::is_keyword("switch")); }
+TEST(KeywordTest, IsKeywordCatch)  { EXPECT_TRUE(TsFormatter::is_keyword("catch")); }
+TEST(KeywordTest, IsKeywordDo)     { EXPECT_TRUE(TsFormatter::is_keyword("do")); }
+
+TEST(KeywordTest, IsKeywordNonsense)     { EXPECT_FALSE(TsFormatter::is_keyword(nullptr)); }
+TEST(KeywordTest, IsKeywordNonKeyword)   { EXPECT_FALSE(TsFormatter::is_keyword("func")); }
+TEST(KeywordTest, IsKeywordTypeKeyword)  { EXPECT_FALSE(TsFormatter::is_keyword("int")); }

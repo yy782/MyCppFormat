@@ -63,11 +63,14 @@ MyCppFormat 是一个 C++ 代码格式化命令行工具，用于将 C++ 源代�
 
 ### 规范 6：关键字空格
 
-`if`、`for`、`while` 等与左括号之间保留一个空格。
+`if`、`for`、`while`、`switch`、`catch`、`do` 等控制流关键字与左括号之间保留一个空格。
 
 | 输入 | 输出 |
 |------|------|
 | `if(condition)` | `if (condition)` |
+| `switch(val)` | `switch (val)` |
+| `catch(...)` | `catch (...)` |
+| `do{...}while(cond)` | `do{...}while (cond)` |
 
 ## 正确性保障
 
