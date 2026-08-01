@@ -218,7 +218,8 @@ static bool in_function_body(TSNode node) {
 
     const char *gptype = ts_node_type(gp);
     return gptype != nullptr &&
-           std::strcmp(gptype, "function_definition") == 0;
+           (std::strcmp(gptype, "function_definition") == 0 ||
+            std::strcmp(gptype, "lambda_expression") == 0);
 }
 
 bool TsFormatter::in_error_subtree(TSNode node) {
