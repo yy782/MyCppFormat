@@ -42,3 +42,9 @@ TEST(KeywordTest, Catch) {
 TEST(KeywordTest, NotFunctionCall) {
     EXPECT_EQ(fmt("func(arg)"), "func(arg)");
 }
+
+TEST(KeywordTest, Do) {
+    // do-while 结构: do 已加入 is_keyword 列表作为防御性覆盖
+    // C++ 中 do 后必须跟语句（非括号），但 while 仍应正确格式化
+    EXPECT_EQ(fmt("do{}while(cond);"), "do{}while (cond);");
+}

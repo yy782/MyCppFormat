@@ -172,7 +172,8 @@ bool TsFormatter::is_keyword(const char *type) {
            std::strcmp(type, "for")   == 0 ||
            std::strcmp(type, "while") == 0 ||
            std::strcmp(type, "switch") == 0 ||
-           std::strcmp(type, "catch") == 0;
+           std::strcmp(type, "catch") == 0 ||
+           std::strcmp(type, "do")    == 0;
 }
 
 /// 检查 { 或 } 是否属于函数定义的 compound_statement 定界符
