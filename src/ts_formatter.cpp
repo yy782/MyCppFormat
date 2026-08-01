@@ -364,34 +364,11 @@ std::string TsFormatter::whitespace_between(
     }
     // 前置空格：当前 token 是指针/引用 → 同行加一个空格，跨行保留换行和缩进
     bool ref_decl = in_pointer_or_ref_decl(cur.node);
-    // 补充：tree-sitter-cpp 可能无法识别函数参数中的引用声明器
-    // （将 T&& 解析为 binary_expression），此时用启发式规则处理：
-    // && 与前一 token 紧邻 → 视为引用声明，插入前置空格。
-    if (!ref_decl && cur_type != nullptr &&
-        std::strcmp(cur_type, "&&") == 0 &&
-        original_gap.find('\n') == std::string::npos &&
-        original_gap.empty()) {
-        ref_decl = true;
-    }
     if (ref_decl) {
         if (original_gap.find('\n') != std::string::npos) {
             return original_gap;  // 跨行 → 不折叠
         }
         return " ";  // 同行 → 单个空格
-    }
-
-    // ── 规范7: >> 模板闭合 — 两个相邻 > token 间插入空格 ──
-    // tree-sitter-cpp 不识别 C++11 >> 模板闭合语法，预处理阶段
-    // 已将模板上下文中的 >> 替换为 > （空格），tree-sitter 因此
-    // 产生两个相邻的 > token。但原始源码中它们是紧挨的，gap 为空，
-    // 此处显式插入空格以还原预处理意图。
-    if (prev_type != nullptr && cur_type != nullptr &&
-        std::strcmp(prev_type, ">") == 0 &&
-        std::strcmp(cur_type, ">") == 0) {
-        if (original_gap.find('\n') != std::string::npos) {
-            return original_gap;  // 跨行 → 不修改
-        }
-        return " ";  // 同行 → 插入空格
     }
 
     // ================================================================
