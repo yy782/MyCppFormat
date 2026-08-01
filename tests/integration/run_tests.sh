@@ -7,12 +7,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
-FORMATTER="${1:-${BUILD_DIR}/src/MyCppFormat}"
+FORMATTER="${1:-${BUILD_DIR}/src/codeformat}"
 
 CASES_DIR="${SCRIPT_DIR}/cases"
 
 if [ ! -x "$FORMATTER" ]; then
-    echo "错误: MyCppFormat 未找到或不可执行: $FORMATTER"
+    echo "错误: codeformat 未找到或不可执行: $FORMATTER"
     echo "请先构建项目: cd build && cmake .. && make"
     exit 1
 fi
