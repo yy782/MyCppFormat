@@ -35,5 +35,5 @@ TEST(SemicolonTest, IdentitySimpleFunc) {
 // 分号规则触发：`a; //` → `a;//`
 TEST(SemicolonTest, IdentityLineComment) {
     EXPECT_EQ(fmt("int a; // int* b, c; if()"),
-              "int a;// int* b, c; if()");
+              "int a; // int* b, c; if()");
 }

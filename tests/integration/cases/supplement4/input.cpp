@@ -60,6 +60,14 @@ int  use_operator() {
     return x ;
 }
 
+
+template<typename U>
+void test_template(U&& u) {
+    u()
+    ;
+}
+
+
 // ============================================================
 // 2. lambda 表达式捕获列表
 // ============================================================
@@ -96,6 +104,8 @@ void test_lambdas() {
 
     // 2.9 捕获列表含逗号 + 函数体内含逗号
     auto l10 = [a, b, c]( int  x, int  y) {return func( a, b, x, y ); };
+
+    test_template([](){ return; });
 
     // 使用 lambda 避免未使用警告
     (void)l1; (void)l2; (void)l3; (void)l4; (void)l5;
