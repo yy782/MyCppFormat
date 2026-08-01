@@ -418,6 +418,41 @@ std::string TsFormatter::format(const std::string &source) {
         }
     }
 
+    // ─ 阶段2b: 屏蔽所有 # 预处理指令行（含 #include, #if, #define 等）──
+    // tree-sitter-cpp 无法解析预处理指令，需将其整行替换为空格，
+    // 避免产生 ERROR 子树导致格式化规则被跳过。
+    {
+        const char *s = masked.data();
+        uint32_t len = static_cast<uint32_t>(masked.size());
+        uint32_t i = 0;
+        while (i < len) {
+            // 跳过行首空白
+            while (i < len && (s[i] == ' ' || s[i] == '\t')) ++i;
+            if (i >= len) break;
+
+            // 如果不是 # 开头，跳过整行
+            if (s[i] != '#') {
+                while (i < len && s[i] != '\n' && s[i] != '\r') ++i;
+                if (i < len && s[i] == '\r') ++i;
+                if (i < len && s[i] == '\n') ++i;
+                continue;
+            }
+
+            // 找到行尾，将 # 到行尾的内容替换为空格
+            uint32_t line_start = i;
+            uint32_t line_end   = i;
+            while (line_end < len && s[line_end] != '\n' && s[line_end] != '\r') ++line_end;
+            for (uint32_t p = line_start; p < line_end; ++p) {
+                masked[p] = ' ';
+            }
+
+            // 跳过换行符
+            i = line_end;
+            if (i < len && s[i] == '\r') ++i;
+            if (i < len && s[i] == '\n') ++i;
+        }
+    }
+
     init_parser();
 
     // ─ 阶段3: 对掩码源使用 tree-sitter 解析 ─
