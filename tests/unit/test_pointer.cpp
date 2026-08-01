@@ -51,9 +51,9 @@ TEST(PointerTest, ConstChar) {
     EXPECT_EQ(fmt("const char* msg;"), "const char *msg;");
 }
 
-// std::vector<int*>& → std::vector<int *>&
+// 模板参数中的 int* 不是变量声明（没有变量名），不应用指针规则
 TEST(PointerTest, InTemplate) {
-    EXPECT_EQ(fmt("std::vector<int*> v;"), "std::vector<int *> v;");
+    EXPECT_EQ(fmt("std::vector<int*> v;"), "std::vector<int*> v;");
 }
 
 // a * b（乘法）不应被修改

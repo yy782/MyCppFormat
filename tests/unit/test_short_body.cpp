@@ -59,10 +59,9 @@ TEST(ShortBodyTest, NewlineImmediatelyAfter) {
               "int f() {\nreturn a;\n}");
 }
 
-// 含指针声明的短函数体：int* f() { *p = val; } → int *f() {*p = val;}
-// 短体规则去除 { 后空格，指针规则同时处理 int* 和 *p
+// 含指针返回类型的短函数体：int* 是返回类型不修改，短体规则处理 {}
 TEST(ShortBodyTest, WithPointerDeclaration) {
-    EXPECT_EQ(fmt("int* f() { *p = val; }"), "int *f() {*p = val;}");
+    EXPECT_EQ(fmt("int* f() { *p = val; }"), "int* f() {*p = val;}");
 }
 
 // ============================================================

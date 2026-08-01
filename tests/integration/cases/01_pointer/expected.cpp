@@ -4,7 +4,7 @@
 
 void process(int *data,double &value);
 void transform(const char **args,int &count);
-char *createBuffer(size_t *size);
+char* createBuffer(size_t *size);
 void input(std::vector<char> &put);
 
 int main() {
@@ -22,7 +22,7 @@ int main() {
     int x,*p = &value,*q = &value;
     int *&ref = a;
 
-    std::vector<int *> vec;
+    std::vector<int*> vec;
 
     // comment: int* a; double & b;
     int *result = 0;

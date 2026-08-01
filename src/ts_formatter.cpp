@@ -94,6 +94,41 @@ static std::string strip_ws_same_line(const std::string &gap) {
 // 辅助：节点类型检测
 // ============================================================
 
+/// 检查声明符链是否最终落于 identifier（变量名）
+/// 如 int *p 中，* 后面的链是 identifier(p) → 是变量声明
+/// 如 V* operator->() 中，* 后面的链是 function_declarator → 是返回类型
+static bool declarator_resolves_to_identifier(TSNode decl) {
+    while (!ts_node_is_null(decl)) {
+        const char *dtype = ts_node_type(decl);
+        if (dtype == nullptr) break;
+        if (std::strcmp(dtype, "identifier") == 0) return true;
+        // 多级指针/引用：继续向下走进内层声明符
+        if (std::strcmp(dtype, "pointer_declarator") == 0 ||
+            std::strcmp(dtype, "reference_declarator") == 0) {
+            // 找到内层 * / & 后面的声明符
+            uint32_t dc = ts_node_child_count(decl);
+            bool found_next = false;
+            TSNode next;
+            for (uint32_t j = 0; j + 1 < dc; j++) {
+                const char *ct = ts_node_type(ts_node_child(decl, j));
+                if (ct && (std::strcmp(ct, "*") == 0 ||
+                           std::strcmp(ct, "&") == 0 ||
+                           std::strcmp(ct, "&&") == 0)) {
+                    next = ts_node_child(decl, j + 1);
+                    found_next = true;
+                    break;
+                }
+            }
+            if (!found_next) break;
+            decl = next;
+            continue;
+        }
+        // function_declarator / operator_name / 其他 → 不是变量声明
+        break;
+    }
+    return false;
+}
+
 bool TsFormatter::in_pointer_or_ref_decl(TSNode node) {
     const char *type = ts_node_type(node);
     if (type == nullptr) return false;
@@ -105,9 +140,26 @@ bool TsFormatter::in_pointer_or_ref_decl(TSNode node) {
     while (!ts_node_is_null(parent)) {
         const char *ptype = ts_node_type(parent);
         if (ptype == nullptr) break;
-        if (std::strcmp(ptype, "pointer_declarator") == 0)         return true;
-        if (std::strcmp(ptype, "reference_declarator") == 0)       return true;
-        if (std::strcmp(ptype, "abstract_pointer_declarator") == 0) return true;
+
+        if (std::strcmp(ptype, "pointer_declarator") == 0 ||
+            std::strcmp(ptype, "reference_declarator") == 0 ||
+            std::strcmp(ptype, "abstract_pointer_declarator") == 0) {
+            // 在 parent 中找到 * / & 之后紧跟的声明符
+            uint32_t child_count = ts_node_child_count(parent);
+            TSNode decl = parent; // fallback: 会被后面的循环覆盖
+            bool found_decl = false;
+            for (uint32_t i = 0; i + 1 < child_count; i++) {
+                TSNode child = ts_node_child(parent, i);
+                if (ts_node_start_byte(child) == ts_node_start_byte(node)) {
+                    decl = ts_node_child(parent, i + 1);
+                    found_decl = true;
+                    break;
+                }
+            }
+            // 检查声明符链是否最终指向变量名
+            if (!found_decl) return false;
+            return declarator_resolves_to_identifier(decl);
+        }
         parent = ts_node_parent(parent);
     }
     return false;

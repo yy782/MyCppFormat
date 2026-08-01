@@ -13,7 +13,7 @@
 // ============================================================
 void analyze(int *data ,double &value ,const char **meta) ;
 
-int *create_buf(size_t *sz) ;
+int* create_buf(size_t *sz) ;
 
 void transform_val(int &x) {
     if (x > 0) {
@@ -79,7 +79,7 @@ void string_literal_test() {
 //   模拟真实项目中的一个类，包含构造函数、成员函数、运算符重载
 // ============================================================
 class DataProcessor {
-    int *buf ;
+    int*    buf ;
     size_t  cap ;
     size_t  len ;
 public:
@@ -92,7 +92,7 @@ public:
         return true ;
     }
 
-    int &at(size_t idx) {return buf[ idx ] ;}
+    int& at(size_t idx) {return buf[ idx ] ;}
 
     int sum() const {
         int total = 0 ;

@@ -40,21 +40,21 @@ class OpResult : public OpResultBase {
 
   using OpResultBase::OpResultBase;
 
-  const V &value() const {return v_;}
+  const V& value() const {return v_;}
 
-  V &value() {return v_;}
+  V& value() {return v_;}
 
   V value_or(V v) const {return status() == OpStatus::OK ? v_ : v;}
 
-  V *operator->() {return &v_;}
+  V* operator->() {return &v_;}
 
-  V &operator *() &{return v_;}
+  V& operator*() & {return v_;}
 
-  V &&operator *() &&{return std::move(v_);}
+  V&& operator*() && {return std::move(v_);}
 
-  const V *operator->() const {return &v_;}
+  const V* operator->() const {return &v_;}
 
-  const V &operator *() const &{return v_;}
+  const V& operator*() const& {return v_;}
 
  private:
   V v_{};

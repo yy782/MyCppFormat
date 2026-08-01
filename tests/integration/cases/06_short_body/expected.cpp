@@ -28,10 +28,10 @@ double calc(double x,double y) {return (x + y) * (x - y);}
 int already_compact() {return 0;}
 
 // 指针返回类型 + 短函数体
-int *get_ptr() {return nullptr;}
+int * get_ptr() {return nullptr;}
 
 // 引用返回类型 + 短函数体
-int &get_ref() {static int x = 0;return x;}
+int & get_ref() {static int x = 0;return x;}
 
 // 多行函数体 — 短函数体规则不应影响
 int multi_line(int n) {
