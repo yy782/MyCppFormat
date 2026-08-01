@@ -31,11 +31,11 @@ jobs:
           cmake ..
           make -j$(nproc)
 
-      - name: Upload MyCppFormat binary
+      - name: Upload codeformat binary
         uses: actions/upload-artifact@v4
         with:
-          name: mycppformat-binary
-          path: build/src/MyCppFormat
+          name: codeformat-binary
+          path: build/src/codeformat
 
       - name: Upload test binaries
         uses: actions/upload-artifact@v4
@@ -74,17 +74,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential
 
-      - name: Download MyCppFormat binary
+      - name: Download codeformat binary
         uses: actions/download-artifact@v4
         with:
-          name: mycppformat-binary
+          name: codeformat-binary
           path: build/src
 
       - name: Make binary executable
-        run: chmod +x build/src/MyCppFormat
+        run: chmod +x build/src/codeformat
 
       - name: Run integration tests
         run: |
           cd tests/integration
           chmod +x run_tests.sh
-          ./run_tests.sh ../../build/src/MyCppFormat
+          ./run_tests.sh ../../build/src/codeformat
