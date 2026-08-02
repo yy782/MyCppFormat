@@ -32,11 +32,25 @@ cmake --build build
 ### 使用
 
 ```bash
-./build/src/MyCppFormat filename.cpp
+./build/src/codeformat filename.cpp
 ```
 
 - 直接修改原文件
 - 自动备份原文件为 `filename.cpp.bak`
+
+### 清理备份文件
+
+格式化后会在同级目录生成 `.bak` 备份文件，使用 `clean_bak.sh` 脚本批量清理：
+
+```bash
+# 清理当前目录下所有 .bak 文件
+bash scripts/clean_bak.sh
+
+# 清理指定目录下所有 .bak 文件
+bash scripts/clean_bak.sh tests/
+```
+
+脚本会先列出所有待删除文件，确认后才执行删除。
 
 ## 格式规范
 
