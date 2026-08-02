@@ -121,7 +121,8 @@ static bool declarator_resolves_to_identifier(TSNode decl) {
         const char *dtype = ts_node_type(decl);
         if (dtype == nullptr) break;
         if (std::strcmp(dtype, "identifier") == 0 ||
-            std::strcmp(dtype, "field_identifier") == 0) return true;
+            std::strcmp(dtype, "field_identifier") == 0 ||
+            std::strcmp(dtype, "qualified_identifier") == 0) return true;
         // 多级指针/引用：继续向下走进内层声明符
         if (std::strcmp(dtype, "pointer_declarator") == 0 ||
             std::strcmp(dtype, "reference_declarator") == 0) {
@@ -143,7 +144,24 @@ static bool declarator_resolves_to_identifier(TSNode decl) {
             decl = next;
             continue;
         }
-        // function_declarator / operator_name / 其他 → 不是变量声明
+        // array_declarator: 如 int *arr[] → 外层是 array_declarator，内层可能是 identifier
+        if (std::strcmp(dtype, "array_declarator") == 0) {
+            uint32_t dc = ts_node_child_count(decl);
+            TSNode inner = (dc > 0) ? ts_node_child(decl, 0) : decl;
+            if (ts_node_is_null(inner)) break;
+            const char *inner_type = ts_node_type(inner);
+            // 数组声明符内部可能是 identifier 或 pointer_declarator
+            if (std::strcmp(inner_type, "identifier") == 0 ||
+                std::strcmp(inner_type, "field_identifier") == 0) return true;
+            if (std::strcmp(inner_type, "pointer_declarator") == 0 ||
+                std::strcmp(inner_type, "reference_declarator") == 0) {
+                decl = inner;
+                continue;
+            }
+            break;
+        }
+        // function_declarator: 如 void (*fp)() → * 后面的链可能以 function_declarator 结尾
+        // 这里不应视为"变量声明"，直接返回 false
         break;
     }
     return false;
