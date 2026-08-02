@@ -1,4 +1,8 @@
-#include "aws.h"
+  class AWS{
+  public:
+  protected:
+    thread_local static AWS *_validInstance;
+  };
 inline int *ptr = nullptr;
 
 thread_local int *thread_ptr = nullptr;
