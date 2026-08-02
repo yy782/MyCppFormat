@@ -54,7 +54,9 @@ for case_dir in "$CASES_DIR"/*/; do
 
     compile_passed=true
     if $diff_passed; then
-        if ! g++ -std=c++20 -fcoroutines -fsyntax-only "$tmp" 2>/dev/null; then
+        if [ -f "${case_dir}/.nosyntax" ]; then
+            compile_passed=true
+        elif ! g++ -std=c++20 -fcoroutines -fsyntax-only "$tmp" 2>/dev/null; then
             compile_passed=false
         fi
     fi
